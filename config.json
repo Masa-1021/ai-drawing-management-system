@@ -1,0 +1,16 @@
+{
+  "extractionFields": [
+    {"name": "図番", "required": true},
+    {"name": "図面タイトル", "required": true},
+    {"name": "作成日", "required": true},
+    {"name": "承認者", "required": true},
+    {"name": "会社名", "required": false},
+    {"name": "尺度", "required": false},
+    {"name": "材料", "required": false},
+    {"name": "材質", "required": false}
+  ],
+  "storagePath": "./storage/drawings/",
+  "lockTimeout": 300,
+  "retryAttempts": 3,
+  "confidenceThreshold": 70
+}
