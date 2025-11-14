@@ -54,3 +54,18 @@ def init_database():
 
 if __name__ == "__main__":
     init_database()
+    # drawingsテーブルにpage_numberカラムを追加（既存DB）
+    import sqlite3
+    db_path = Path(__file__).parent.parent / "storage" / "database.db"
+    conn = sqlite3.connect(str(db_path))
+    c = conn.cursor()
+    try:
+        c.execute("ALTER TABLE drawings ADD COLUMN page_number INTEGER NOT NULL DEFAULT 0;")
+        print("[OK] drawingsテーブルにpage_numberカラムを追加しました。")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("[INFO] page_numberカラムはすでに追加されています。")
+        else:
+            print(f"[ERROR] ALTER TABLE失敗: {e}")
+    conn.commit()
+    conn.close()

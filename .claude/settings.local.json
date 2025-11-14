@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws sts get-caller-identity:*)",
+      "Bash(if [ -f .env ])",
+      "Bash(then cat .env)",
+      "Bash(else echo \"No .env file found\")",
+      "Bash(fi)",
+      "Bash(aws:*)",
+      "Bash(poetry run python:*)",
+      "Bash(python test:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(npm --version)",
+      "Bash(npm install)",
+      "Bash(timeout:*)",
+      "Bash(npm install:*)",
+      "Bash(npx playwright install:*)",
+      "Bash(npx playwright test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Float, JSON, TIMESTAMP
+from sqlalchemy import Column, String, Text, Float, JSON, TIMESTAMP, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -15,6 +15,7 @@ class Drawing(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     pdf_filename = Column(String, nullable=False)
     pdf_path = Column(String, nullable=False)
+    page_number = Column(Integer, nullable=False)
     thumbnail_path = Column(String)
     status = Column(
         String, nullable=False, default="pending"
