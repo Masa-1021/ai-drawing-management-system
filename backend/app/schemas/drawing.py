@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field
 class DrawingBase(BaseModel):
     """図面基本スキーマ"""
 
-    pdf_filename: str
+    original_filename: str  # 元のファイル名
+    pdf_filename: str  # ストレージ上のファイル名（編集可能）
     page_number: int = 0
     classification: Optional[str] = None
     status: str = "pending"
@@ -25,6 +26,7 @@ class DrawingCreate(DrawingBase):
 class DrawingUpdate(BaseModel):
     """図面更新スキーマ"""
 
+    pdf_filename: Optional[str] = None  # ファイル名の編集を許可
     classification: Optional[str] = None
     status: Optional[str] = None
     summary: Optional[str] = None
@@ -50,7 +52,7 @@ class BalloonSchema(BaseModel):
 
     balloon_number: str
     part_name: Optional[str] = None
-    quantity: int = 1
+    quantity: Optional[int] = 1
     confidence: int
     x: int
     y: int
@@ -72,10 +74,22 @@ class RevisionSchema(BaseModel):
         from_attributes = True
 
 
+class TagSchema(BaseModel):
+    """タグスキーマ"""
+
+    id: int
+    tag_name: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class DrawingResponse(DrawingBase):
     """図面レスポンススキーマ"""
 
-    id: int
+    id: str  # UUID
+    pdf_path: str  # 実際のファイルパス
     thumbnail_path: Optional[str] = None
     upload_date: datetime
     analyzed_at: Optional[datetime] = None
@@ -89,6 +103,7 @@ class DrawingResponse(DrawingBase):
     extracted_fields: List[ExtractedFieldSchema] = []
     balloons: List[BalloonSchema] = []
     revisions: List[RevisionSchema] = []
+    tags: List[TagSchema] = []
 
     class Config:
         from_attributes = True
@@ -104,5 +119,5 @@ class DrawingListResponse(BaseModel):
 class BulkOperationRequest(BaseModel):
     """一括操作リクエスト"""
 
-    drawing_ids: List[int] = Field(..., min_length=1)
+    drawing_ids: List[str] = Field(..., min_length=1)  # UUID
     value: Optional[str] = None

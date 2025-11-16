@@ -36,7 +36,7 @@ class LockManager:
         self.lock_timeout = lock_timeout
         self.websocket_manager = websocket_manager
 
-    async def acquire_lock(self, drawing_id: int, user_id: str) -> Lock:
+    async def acquire_lock(self, drawing_id: str, user_id: str) -> Lock:
         """
         ロックを取得
 
@@ -55,9 +55,12 @@ class LockManager:
 
         if existing_lock:
             if existing_lock.user_id == user_id:
-                # 同じユーザーの場合は更新
-                existing_lock.acquired_at = datetime.utcnow()
+                # 同じユーザーの場合は更新（タイムスタンプと有効期限を延長）
+                now = datetime.utcnow()
+                existing_lock.acquired_at = now
+                existing_lock.expires_at = now + timedelta(seconds=self.lock_timeout)
                 self.db.commit()
+                logger.info(f"Lock renewed: drawing={drawing_id}, user={user_id}")
                 return existing_lock
             else:
                 raise LockException(
@@ -78,7 +81,7 @@ class LockManager:
 
         return lock
 
-    async def release_lock(self, drawing_id: int, user_id: str) -> bool:
+    async def release_lock(self, drawing_id: str, user_id: str) -> bool:
         """
         ロックを解放
 
@@ -113,7 +116,7 @@ class LockManager:
 
         return True
 
-    def check_lock(self, drawing_id: int) -> Optional[Lock]:
+    def check_lock(self, drawing_id: str) -> Optional[Lock]:
         """
         ロック状態を確認
 
@@ -141,13 +144,11 @@ class LockManager:
         Returns:
             削除件数
         """
-        timeout_threshold = datetime.utcnow() - timedelta(
-            seconds=self.lock_timeout
-        )
+        now = datetime.utcnow()
 
         deleted_count = (
             self.db.query(Lock)
-            .filter(Lock.acquired_at < timeout_threshold)
+            .filter(Lock.expires_at < now)
             .delete()
         )
 

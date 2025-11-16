@@ -13,8 +13,9 @@ class Drawing(Base):
     __tablename__ = "drawings"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    pdf_filename = Column(String, nullable=False)
-    pdf_path = Column(String, nullable=False)
+    original_filename = Column(String, nullable=False)  # アップロード時の元のファイル名
+    pdf_filename = Column(String, nullable=False)  # 表示用ファイル名（編集可能）
+    pdf_path = Column(String, nullable=False)  # 実際のストレージパス（UUID形式、読み取り専用）
     page_number = Column(Integer, nullable=False)
     thumbnail_path = Column(String)
     status = Column(

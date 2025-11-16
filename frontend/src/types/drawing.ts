@@ -29,9 +29,17 @@ export interface Revision {
   confidence: number;
 }
 
-export interface Drawing {
+export interface Tag {
   id: number;
-  pdf_filename: string;
+  tag_name: string;
+  created_at: string;
+}
+
+export interface Drawing {
+  id: string; // UUID
+  original_filename: string; // 元のファイル名
+  pdf_filename: string; // 表示用ファイル名（編集可能）
+  pdf_path: string; // 実際のファイルパス（UUID形式）
   page_number: number;
   thumbnail_path?: string;
   status: 'pending' | 'analyzing' | 'approved' | 'unapproved' | 'failed';
@@ -46,6 +54,7 @@ export interface Drawing {
   extracted_fields: ExtractedField[];
   balloons: Balloon[];
   revisions: Revision[];
+  tags: Tag[];
 }
 
 export interface DrawingListResponse {

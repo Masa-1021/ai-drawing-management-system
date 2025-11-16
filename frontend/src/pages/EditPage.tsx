@@ -21,42 +21,46 @@ export default function EditPage() {
 
   const [isLocked, setIsLocked] = useState(false);
   const [lockedBy, setLockedBy] = useState<string | null>(null);
-  const [userId] = useState(() => `user-${Math.random().toString(36).substr(2, 9)}`);
+
+  // ユーザーIDをlocalStorageで永続化（ブラウザごとに固定）
+  const [userId] = useState(() => {
+    const stored = localStorage.getItem('cad_user_id');
+    if (stored) {
+      return stored;
+    }
+    const newId = `user-${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('cad_user_id', newId);
+    return newId;
+  });
 
   useEffect(() => {
     if (id) {
-      const drawingId = parseInt(id);
-      loadDrawing(drawingId);
-      acquireLock(drawingId);
+      loadDrawing(id);
+      acquireLock(id);
 
       // WebSocket接続と購読
       websocketClient.connect();
-      websocketClient.subscribeDrawing(drawingId);
-
-      // ロックイベントのリスナー
-      websocketClient.onDrawingLocked(drawingId, (data) => {
-        if (data.locked_by !== userId) {
+      websocketClient.subscribeDrawing(id, (data) => {
+        if (data.type === 'locked' && data.locked_by !== userId) {
           setIsLocked(true);
           setLockedBy(data.locked_by || null);
           toast.error(`${data.locked_by}が編集中です`);
+        } else if (data.type === 'unlocked') {
+          setIsLocked(false);
+          setLockedBy(null);
+          toast.success('編集ロックが解除されました');
         }
-      });
-
-      websocketClient.onDrawingUnlocked(drawingId, () => {
-        setIsLocked(false);
-        setLockedBy(null);
-        toast.success('編集ロックが解除されました');
       });
 
       // クリーンアップ
       return () => {
-        releaseLock(drawingId);
-        websocketClient.unsubscribeDrawing(drawingId);
+        releaseLock(id);
+        websocketClient.unsubscribeDrawing(id);
       };
     }
   }, [id]);
 
-  const loadDrawing = async (drawingId: number) => {
+  const loadDrawing = async (drawingId: string) => {
     try {
       setLoading(true);
       const drawing = await drawingsApi.get(drawingId);
@@ -69,7 +73,7 @@ export default function EditPage() {
     }
   };
 
-  const acquireLock = async (drawingId: number) => {
+  const acquireLock = async (drawingId: string) => {
     try {
       await lockApi.acquireLock(drawingId, userId);
       setIsLocked(false);
@@ -77,16 +81,20 @@ export default function EditPage() {
     } catch (error) {
       console.error('Failed to acquire lock:', error);
       // ロック取得失敗時は他のユーザーがロック中
-      const lock = await lockApi.checkLock(drawingId);
-      if (lock) {
-        setIsLocked(true);
-        setLockedBy(lock.user_id);
-        toast.error(`${lock.user_id}が編集中です（読み取り専用）`);
+      try {
+        const lock = await lockApi.checkLock(drawingId);
+        if (lock) {
+          setIsLocked(true);
+          setLockedBy(lock.user_id);
+          toast.error(`${lock.user_id}が編集中です（読み取り専用）`);
+        }
+      } catch (e) {
+        // Lock check failed, continue
       }
     }
   };
 
-  const releaseLock = async (drawingId: number) => {
+  const releaseLock = async (drawingId: string) => {
     try {
       await lockApi.releaseLock(drawingId, userId);
     } catch (error) {
@@ -105,7 +113,11 @@ export default function EditPage() {
     try {
       setLoading(true);
       await drawingsApi.update(selectedDrawing.id, data);
-      updateDrawing(selectedDrawing.id, data);
+
+      // 保存後、サーバーから最新データを再読み込み
+      const updatedDrawing = await drawingsApi.get(selectedDrawing.id);
+      setSelectedDrawing(updatedDrawing);
+
       toast.success('保存しました');
     } catch (error) {
       console.error('Failed to save:', error);
@@ -173,8 +185,19 @@ export default function EditPage() {
     );
   }
 
-  // PDFのURL（実際の実装ではバックエンドから取得）
-  const pdfUrl = `http://localhost:8000/storage/drawings/${selectedDrawing.pdf_filename}`;
+  // PDFのURL - pdf_pathから実際のファイル名を取得
+  // Windowsのバックスラッシュとスラッシュの両方に対応
+  const actualFilename = selectedDrawing.pdf_path
+    ? (selectedDrawing.pdf_path.split(/[/\\]/).pop() || selectedDrawing.pdf_filename)
+    : selectedDrawing.pdf_filename;
+  const pdfUrl = `http://localhost:8000/storage/drawings/${actualFilename}`;
+
+  console.log('[DEBUG] EditPage PDF info:', {
+    pdf_path: selectedDrawing.pdf_path,
+    pdf_filename: selectedDrawing.pdf_filename,
+    actualFilename,
+    pdfUrl,
+  });
 
   return (
     <div className="space-y-4">
@@ -184,6 +207,9 @@ export default function EditPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             {selectedDrawing.pdf_filename}
           </h1>
+          {selectedDrawing.original_filename && (
+            <p className="text-xs text-gray-500 mt-1">元のファイル名: {selectedDrawing.original_filename}</p>
+          )}
           {isLocked && lockedBy && (
             <div className="mt-2 px-3 py-1 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-md inline-block">
               🔒 {lockedBy}が編集中（読み取り専用）

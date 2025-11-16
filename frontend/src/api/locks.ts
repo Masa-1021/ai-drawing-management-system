@@ -5,7 +5,7 @@
 import apiClient from './client';
 
 export interface Lock {
-  drawing_id: number;
+  drawing_id: string;
   user_id: string;
   acquired_at: string;
 }
@@ -14,7 +14,7 @@ export const lockApi = {
   /**
    * ロックを取得
    */
-  acquireLock: async (drawingId: number, userId: string): Promise<Lock> => {
+  acquireLock: async (drawingId: string, userId: string): Promise<Lock> => {
     const response = await apiClient.post<Lock>('/api/v1/locks/acquire', {
       drawing_id: drawingId,
       user_id: userId,
@@ -25,7 +25,7 @@ export const lockApi = {
   /**
    * ロックを解放
    */
-  releaseLock: async (drawingId: number, userId: string): Promise<void> => {
+  releaseLock: async (drawingId: string, userId: string): Promise<void> => {
     await apiClient.delete('/api/v1/locks/release', {
       data: {
         drawing_id: drawingId,
@@ -37,7 +37,7 @@ export const lockApi = {
   /**
    * ロック状態を確認
    */
-  checkLock: async (drawingId: number): Promise<Lock | null> => {
+  checkLock: async (drawingId: string): Promise<Lock | null> => {
     const response = await apiClient.get<Lock | null>(`/api/v1/locks/${drawingId}`);
     return response.data;
   },

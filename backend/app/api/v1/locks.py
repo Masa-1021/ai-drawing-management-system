@@ -19,21 +19,21 @@ router = APIRouter()
 class AcquireLockRequest(BaseModel):
     """ロック取得リクエスト"""
 
-    drawing_id: int
+    drawing_id: str  # UUID
     user_id: str
 
 
 class ReleaseLockRequest(BaseModel):
     """ロック解放リクエスト"""
 
-    drawing_id: int
+    drawing_id: str  # UUID
     user_id: str
 
 
 class LockResponse(BaseModel):
     """ロックレスポンス"""
 
-    drawing_id: int
+    drawing_id: str  # UUID
     user_id: str
     acquired_at: str
 
@@ -79,11 +79,11 @@ async def release_lock(request: ReleaseLockRequest, db: Session = Depends(get_db
 
 
 @router.get("/{drawing_id}", response_model=LockResponse | None)
-def check_lock(drawing_id: int, db: Session = Depends(get_db)):
+def check_lock(drawing_id: str, db: Session = Depends(get_db)):
     """
     ロック状態を確認
 
-    - **drawing_id**: 図面ID
+    - **drawing_id**: 図面ID (UUID)
     """
     manager = LockManager(db)
     lock = manager.check_lock(drawing_id)

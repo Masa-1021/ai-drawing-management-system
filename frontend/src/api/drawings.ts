@@ -26,6 +26,8 @@ export const drawingsApi = {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          // AI解析には時間がかかるため、タイムアウトを5分に設定
+          timeout: 300000, // 5分
         }
       );
       console.log('[DEBUG] API response:', response);
@@ -64,7 +66,7 @@ export const drawingsApi = {
   /**
    * 図面を取得
    */
-  get: async (id: number): Promise<Drawing> => {
+  get: async (id: string): Promise<Drawing> => {
     const response = await apiClient.get<Drawing>(`/api/v1/drawings/${id}`);
     return response.data;
   },
@@ -73,7 +75,7 @@ export const drawingsApi = {
    * 図面を更新
    */
   update: async (
-    id: number,
+    id: string,
     data: Partial<Pick<Drawing, 'classification' | 'status' | 'summary'>>
   ): Promise<Drawing> => {
     const response = await apiClient.put<Drawing>(`/api/v1/drawings/${id}`, data);
@@ -83,7 +85,7 @@ export const drawingsApi = {
   /**
    * 図面を承認
    */
-  approve: async (id: number): Promise<Drawing> => {
+  approve: async (id: string): Promise<Drawing> => {
     const response = await apiClient.put<Drawing>(`/api/v1/drawings/${id}/approve`);
     return response.data;
   },
@@ -91,7 +93,7 @@ export const drawingsApi = {
   /**
    * 図面の承認を取り消し
    */
-  unapprove: async (id: number): Promise<Drawing> => {
+  unapprove: async (id: string): Promise<Drawing> => {
     const response = await apiClient.put<Drawing>(`/api/v1/drawings/${id}/unapprove`);
     return response.data;
   },
@@ -99,7 +101,7 @@ export const drawingsApi = {
   /**
    * 図面を削除
    */
-  delete: async (ids: number[]): Promise<{ deleted_count: number }> => {
+  delete: async (ids: string[]): Promise<{ deleted_count: number }> => {
     const response = await apiClient.delete('/api/v1/drawings/', {
       data: { drawing_ids: ids },
     });
@@ -109,8 +111,11 @@ export const drawingsApi = {
   /**
    * 図面を再解析
    */
-  reanalyze: async (id: number): Promise<Drawing> => {
-    const response = await apiClient.post<Drawing>(`/api/v1/drawings/${id}/reanalyze`);
+  reanalyze: async (id: string): Promise<Drawing> => {
+    const response = await apiClient.post<Drawing>(`/api/v1/drawings/${id}/reanalyze`, {}, {
+      // AI解析には時間がかかるため、タイムアウトを5分に設定
+      timeout: 300000, // 5分
+    });
     return response.data;
   },
 };

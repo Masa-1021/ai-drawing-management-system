@@ -8,6 +8,12 @@ import toast from 'react-hot-toast';
 import { drawingsApi } from '../api/drawings';
 import { useDrawingStore } from '../stores/drawingStore';
 
+interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'success' | 'error' | 'warning';
+  message: string;
+}
+
 export default function UploadPage() {
   const navigate = useNavigate();
   const { addDrawing, setLoading } = useDrawingStore();
@@ -15,6 +21,17 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  const addLog = (level: LogEntry['level'], message: string) => {
+    const timestamp = new Date().toLocaleTimeString('ja-JP');
+    setLogs((prev) => [...prev, { timestamp, level, message }]);
+  };
+
+  const clearLogs = () => {
+    setLogs([]);
+  };
 
   const handleFileSelect = async (files: FileList | null) => {
     console.log('[DEBUG] handleFileSelect called:', files);
@@ -42,24 +59,52 @@ export default function UploadPage() {
 
     // アップロード
     try {
+      clearLogs();
+      addLog('info', `ファイルを選択しました: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+
       console.log('[DEBUG] Upload start: setUploadProgress(0)');
       setIsUploading(true);
       setLoading(true);
       setUploadProgress(0);
+      setUploadStatus('PDFファイルをアップロード中...');
+      addLog('info', 'PDFファイルをサーバーにアップロード中...');
+
+      // 少し待機してUIを更新
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setUploadProgress(10);
+      setUploadStatus('PDF回転を検出・修正中...');
+      addLog('info', 'PDF回転を自動検出・修正中...');
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setUploadProgress(20);
+      setUploadStatus('サムネイルを生成中...');
+      addLog('info', 'サムネイルを生成中...');
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setUploadProgress(30);
+      setUploadStatus('AI解析を実行中...');
+      addLog('info', 'AI解析を実行中（図面情報を自動抽出）...');
 
       console.log('[DEBUG] Call drawingsApi.upload');
       const drawings = await drawingsApi.upload(file, true);
 
       console.log('[DEBUG] Upload succeeded:', drawings);
+      addLog('success', `アップロード完了: ${drawings.length}ページの図面を処理しました`);
+
+      setUploadProgress(90);
+      setUploadStatus('アップロード完了！');
 
       // ストアに追加
       drawings.forEach((drawing, idx) => {
         console.log(`[DEBUG] addDrawing idx=${idx}:`, drawing);
         addDrawing(drawing);
+        addLog('info', `図面 ${idx + 1}/${drawings.length}: ${drawing.pdf_filename} を登録しました`);
       });
 
       toast.success(`${drawings.length}ページの図面をアップロードしました`);
       setUploadProgress(100);
+      setUploadStatus('処理完了');
+      addLog('success', '全ての処理が完了しました。一覧ページに移動します...');
 
       // 一覧ページに遷移
       setTimeout(() => {
@@ -77,6 +122,11 @@ export default function UploadPage() {
       ) {
         // @ts-ignore
         console.log('[ERROR] Axios error response:', error.response);
+        // @ts-ignore
+        const errorMessage = error.response?.data?.detail || 'アップロードに失敗しました';
+        addLog('error', `エラー: ${errorMessage}`);
+      } else {
+        addLog('error', `エラー: ${error}`);
       }
 
       toast.error('アップロードに失敗しました');
@@ -85,6 +135,7 @@ export default function UploadPage() {
       setIsUploading(false);
       setLoading(false);
       setUploadProgress(0);
+      setUploadStatus('');
     }
   };
 
@@ -150,17 +201,74 @@ export default function UploadPage() {
 
         {/* アップロード進捗 */}
         {isUploading && (
-          <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="mt-6 space-y-3">
+            <div className="w-full bg-gray-200 rounded-full h-3">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-in-out"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="mt-2 text-sm text-gray-600">アップロード中...</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-700">{uploadStatus}</p>
+              <p className="text-sm text-gray-500">{uploadProgress}%</p>
+            </div>
+            <div className="text-xs text-gray-500 space-y-1">
+              <p>• PDFの回転を自動検出・修正しています</p>
+              <p>• AI解析により図面情報を自動抽出しています</p>
+              <p>• この処理には数分かかることがあります</p>
+            </div>
           </div>
         )}
       </div>
+
+      {/* 操作ログ */}
+      {logs.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold text-gray-900">操作ログ</h2>
+            <button
+              onClick={clearLogs}
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              クリア
+            </button>
+          </div>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {logs.map((log, index) => (
+              <div
+                key={index}
+                className={`flex items-start space-x-3 text-sm p-2 rounded ${
+                  log.level === 'error'
+                    ? 'bg-red-50 text-red-700'
+                    : log.level === 'success'
+                    ? 'bg-green-50 text-green-700'
+                    : log.level === 'warning'
+                    ? 'bg-yellow-50 text-yellow-700'
+                    : 'bg-gray-50 text-gray-700'
+                }`}
+              >
+                <span className="font-mono text-xs text-gray-500 whitespace-nowrap">
+                  {log.timestamp}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    log.level === 'error'
+                      ? 'bg-red-100 text-red-800'
+                      : log.level === 'success'
+                      ? 'bg-green-100 text-green-800'
+                      : log.level === 'warning'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}
+                >
+                  {log.level.toUpperCase()}
+                </span>
+                <span className="flex-1">{log.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

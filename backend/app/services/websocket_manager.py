@@ -25,7 +25,7 @@ class WebSocketManager:
         )
 
         # 図面IDごとの購読ユーザーを管理
-        self._subscriptions: Dict[int, Set[str]] = {}
+        self._subscriptions: Dict[str, Set[str]] = {}
 
         # イベントハンドラーを登録
         self._setup_handlers()
@@ -53,7 +53,7 @@ class WebSocketManager:
         async def subscribe_drawing(sid, data):
             """図面の購読開始"""
             try:
-                drawing_id = int(data.get("drawing_id"))
+                drawing_id = str(data.get("drawing_id"))
                 logger.info(f"Client {sid} subscribing to drawing {drawing_id}")
 
                 if drawing_id not in self._subscriptions:
@@ -78,7 +78,7 @@ class WebSocketManager:
         async def unsubscribe_drawing(sid, data):
             """図面の購読解除"""
             try:
-                drawing_id = int(data.get("drawing_id"))
+                drawing_id = str(data.get("drawing_id"))
                 logger.info(f"Client {sid} unsubscribing from drawing {drawing_id}")
 
                 if drawing_id in self._subscriptions and sid in self._subscriptions[drawing_id]:
@@ -94,7 +94,7 @@ class WebSocketManager:
             except Exception as e:
                 logger.error(f"Error unsubscribing: {e}")
 
-    async def notify_drawing_locked(self, drawing_id: int, locked_by: str):
+    async def notify_drawing_locked(self, drawing_id: str, locked_by: str):
         """図面がロックされたことを通知"""
         if drawing_id in self._subscriptions:
             logger.info(f"Notifying lock for drawing {drawing_id} by {locked_by}")
@@ -108,7 +108,7 @@ class WebSocketManager:
                     room=sid,
                 )
 
-    async def notify_drawing_unlocked(self, drawing_id: int):
+    async def notify_drawing_unlocked(self, drawing_id: str):
         """図面のロックが解除されたことを通知"""
         if drawing_id in self._subscriptions:
             logger.info(f"Notifying unlock for drawing {drawing_id}")

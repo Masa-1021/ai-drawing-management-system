@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     aws_access_key_id: str = Field(default="", alias="AWS_ACCESS_KEY_ID")
     aws_secret_access_key: str = Field(default="", alias="AWS_SECRET_ACCESS_KEY")
     model_id: str = Field(
-        default="anthropic.claude-sonnet-4-20250514", alias="MODEL_ID"
+        default="anthropic.claude-3-5-sonnet-20241022-v2:0", alias="MODEL_ID"
     )
     database_url: str = Field(
         default="sqlite:///./storage/database.db", alias="DATABASE_URL"

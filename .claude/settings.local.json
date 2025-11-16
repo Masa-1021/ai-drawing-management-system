@@ -17,7 +17,18 @@
       "Bash(timeout:*)",
       "Bash(npm install:*)",
       "Bash(npx playwright install:*)",
-      "Bash(npx playwright test:*)"
+      "Bash(npx playwright test:*)",
+      "Bash(poetry install:*)",
+      "Bash(poetry run uvicorn:*)",
+      "Bash(iconv:*)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(dir:*)",
+      "Bash(del /Q drawings*.*)",
+      "Bash(del /Q thumbnails*.*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

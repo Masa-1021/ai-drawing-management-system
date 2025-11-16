@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from app.services.ai_analysis_service import AIAnalysisException
@@ -130,6 +131,14 @@ app.include_router(config.router, prefix="/api/v1/config", tags=["config"])
 
 # WebSocketをマウント
 app.mount("/ws", websocket_manager.get_asgi_app())
+
+# 静的ファイルをマウント（storage/drawings, storage/thumbnails）
+storage_path = Path(__file__).parent.parent.parent / "storage"
+if storage_path.exists():
+    app.mount("/storage", StaticFiles(directory=str(storage_path)), name="storage")
+    logger.info(f"Static files mounted: {storage_path}")
+else:
+    logger.warning(f"Storage directory not found: {storage_path}")
 
 
 if __name__ == "__main__":

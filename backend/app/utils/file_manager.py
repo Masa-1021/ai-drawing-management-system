@@ -37,13 +37,110 @@ class FileManager:
         self.drawings_path.mkdir(parents=True, exist_ok=True)
         self.thumbnails_path.mkdir(parents=True, exist_ok=True)
 
-    def save_pdf(self, pdf_bytes: bytes, original_filename: str) -> Tuple[str, str]:
+    def detect_rotation(self, pdf_path: str, page_num: int = 0) -> int:
         """
-        PDFファイルを保存
+        PDFページの回転角度を検出
+
+        Args:
+            pdf_path: PDFファイルのパス
+            page_num: ページ番号（0始まり）
+
+        Returns:
+            回転角度（0, 90, 180, 270）
+        """
+        doc = fitz.open(pdf_path)
+        page = doc[page_num]
+        rotation = page.rotation
+        doc.close()
+        return rotation
+
+    def rotate_pdf(self, pdf_path: str, rotation_angle: int) -> None:
+        """
+        PDFの全ページを指定角度だけ回転して保存
+
+        Args:
+            pdf_path: PDFファイルのパス
+            rotation_angle: 回転角度（90, 180, 270, -90など）
+        """
+        import tempfile
+        import os
+        import shutil
+
+        # 一時ファイルを作成
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.pdf')
+        os.close(temp_fd)  # 即座に閉じる
+
+        doc = None
+        try:
+            # 元のPDFを開く
+            doc = fitz.open(pdf_path)
+
+            # 全ページを回転
+            for page in doc:
+                # 現在の回転角度を取得
+                current_rotation = page.rotation
+                # 新しい回転角度を計算（累積ではなく絶対値）
+                new_rotation = (current_rotation + rotation_angle) % 360
+                page.set_rotation(new_rotation)
+
+            # 一時ファイルに保存
+            doc.save(temp_path, garbage=4, deflate=True, clean=True)
+            doc.close()
+            doc = None
+
+            # Windowsでの問題を避けるため、少し待つ
+            import time
+            time.sleep(0.1)
+
+            # 元のファイルを削除してから一時ファイルを移動
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+            shutil.move(temp_path, pdf_path)
+
+        except Exception as e:
+            # ドキュメントが開いていたら閉じる
+            if doc is not None:
+                try:
+                    doc.close()
+                except:
+                    pass
+
+            # 一時ファイルを削除
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except:
+                pass
+            raise e
+
+    def auto_correct_rotation(self, pdf_path: str) -> int:
+        """
+        PDFの回転を自動検出して0度に修正
+
+        Args:
+            pdf_path: PDFファイルのパス
+
+        Returns:
+            修正した角度（元の回転角度）
+        """
+        rotation = self.detect_rotation(pdf_path, 0)
+
+        if rotation != 0:
+            # 0度に戻すための角度を計算（反対方向に回転）
+            correction_angle = -rotation
+            self.rotate_pdf(pdf_path, correction_angle)
+            return rotation
+
+        return 0
+
+    def save_pdf(self, pdf_bytes: bytes, original_filename: str, auto_rotate: bool = True) -> Tuple[str, str]:
+        """
+        PDFファイルを保存（オプションで自動回転修正）
 
         Args:
             pdf_bytes: PDFのバイトデータ
             original_filename: 元のファイル名
+            auto_rotate: 自動回転修正を行うか（デフォルト: True）
 
         Returns:
             (保存したファイル名, 保存先の絶対パス)
@@ -59,6 +156,12 @@ class FileManager:
         # ファイルを保存
         with open(save_path, "wb") as f:
             f.write(pdf_bytes)
+
+        # 自動回転修正
+        if auto_rotate:
+            original_rotation = self.auto_correct_rotation(str(save_path))
+            if original_rotation != 0:
+                print(f"[INFO] PDF回転を検出: {original_rotation}度 → 0度に修正しました")
 
         return new_filename, str(save_path)
 
@@ -80,13 +183,14 @@ class FileManager:
         return False
 
     def generate_thumbnail(
-        self, pdf_path: str, max_size: Tuple[int, int] = (200, 300)
+        self, pdf_path: str, page_num: int = 0, max_size: Tuple[int, int] = (200, 300)
     ) -> str:
         """
         PDFのサムネイルを生成
 
         Args:
             pdf_path: PDFファイルのパス
+            page_num: ページ番号（0始まり）
             max_size: サムネイルの最大サイズ (width, height)
 
         Returns:
@@ -94,13 +198,16 @@ class FileManager:
         """
         pdf_path = Path(pdf_path)
 
-        # サムネイルファイル名
-        thumbnail_filename = pdf_path.stem + ".png"
+        # サムネイルファイル名（ページ番号を含む）
+        if page_num > 0:
+            thumbnail_filename = f"{pdf_path.stem}_page{page_num}.png"
+        else:
+            thumbnail_filename = f"{pdf_path.stem}.png"
         thumbnail_path = self.thumbnails_path / thumbnail_filename
 
         # PDFを開く
         doc = fitz.open(pdf_path)
-        page = doc[0]  # 最初のページ
+        page = doc[page_num]  # 指定されたページ
 
         # 50%のサイズで画像化
         mat = fitz.Matrix(0.5, 0.5)

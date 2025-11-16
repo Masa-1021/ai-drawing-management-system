@@ -3,6 +3,7 @@
  */
 
 import { useForm } from 'react-hook-form';
+import { useEffect } from 'react';
 import type { Drawing } from '../types/drawing';
 
 interface EditFormProps {
@@ -20,12 +21,22 @@ export default function EditForm({
   onReject,
   disabled = false,
 }: EditFormProps) {
-  const { register, handleSubmit } = useForm({
+  const { register, handleSubmit, reset } = useForm({
     defaultValues: {
+      pdf_filename: drawing.pdf_filename || '',
       classification: drawing.classification || '',
       summary: drawing.summary || '',
     },
   });
+
+  // drawing が変更されたら、フォームの値をリセット
+  useEffect(() => {
+    reset({
+      pdf_filename: drawing.pdf_filename || '',
+      classification: drawing.classification || '',
+      summary: drawing.summary || '',
+    });
+  }, [drawing, reset]);
 
   const onSubmit = (data: Record<string, string>) => {
     onSave(data);
@@ -45,6 +56,22 @@ export default function EditForm({
           <h3 className="text-lg font-semibold mb-4">基本情報</h3>
 
           <div className="space-y-4">
+            {/* ファイル名 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ファイル名（編集可能）
+              </label>
+              <input
+                type="text"
+                {...register('pdf_filename')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                disabled={disabled}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                元のファイル名: {drawing.original_filename}
+              </p>
+            </div>
+
             {/* 分類 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -72,6 +72,7 @@ class DrawingService:
             DrawingServiceException: 作成エラー
         """
         try:
+            logger.info(f"[DEBUG] create_drawing called with filename: '{filename}'")
             logger.info(f"Creating drawing: {filename}")
 
             # 現在のユーザー名を取得（ホスト名/ユーザー名）
@@ -108,15 +109,21 @@ class DrawingService:
                     logger.error(f"[ERROR] サムネイル生成失敗: {thumbnail_path}")
                     raise DrawingServiceException(f"サムネイル生成失敗: {thumbnail_path}")
 
+                # サムネイルのファイル名のみを取得（相対パス）
+                thumbnail_filename = Path(thumbnail_path).name
+
                 # Drawingレコード作成
+                logger.info(f"[DEBUG] Creating Drawing record with original_filename='{filename}', pdf_filename='{new_filename}'")
                 drawing = Drawing(
+                    original_filename=filename,  # 元のファイル名を保存
                     pdf_filename=new_filename,
                     pdf_path=save_path,  # 必須項目
                     page_number=page_num,
-                    thumbnail_path=str(thumbnail_path),
+                    thumbnail_path=thumbnail_filename,  # ファイル名のみ
                     status="pending" if run_analysis else "unapproved",
                     created_by=created_by,
                 )
+                logger.info(f"[DEBUG] Drawing object created: original_filename={drawing.original_filename}, pdf_filename={drawing.pdf_filename}")
                 # 必須フィールドチェック
                 if not drawing.pdf_filename or not drawing.thumbnail_path:
                     logger.error(f"[ERROR] Drawing生成パラメータ不備: {drawing}")
@@ -150,7 +157,9 @@ class DrawingService:
 
         except Exception as e:
             self.db.rollback()
+            import traceback
             logger.error(f"Failed to create drawing: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise DrawingServiceException(f"図面作成エラー: {str(e)}")
 
     def _run_analysis(self, drawing: Drawing) -> None:
@@ -177,15 +186,16 @@ class DrawingService:
 
             # 図枠情報を保存
             for field_data in result.get("fields", []):
+                coordinates = field_data.get("coordinates", {})
                 extracted_field = ExtractedField(
                     drawing_id=drawing.id,
-                    field_name=field_data["name"],
-                    field_value=field_data["value"],
-                    confidence=field_data["confidence"],
-                    x=field_data["coordinates"].get("x", 0),
-                    y=field_data["coordinates"].get("y", 0),
-                    width=field_data["coordinates"].get("width", 0),
-                    height=field_data["coordinates"].get("height", 0),
+                    field_name=field_data.get("name", ""),
+                    field_value=field_data.get("value", ""),
+                    confidence=field_data.get("confidence", 0),
+                    x=coordinates.get("x", 0),
+                    y=coordinates.get("y", 0),
+                    width=coordinates.get("width", 0),
+                    height=coordinates.get("height", 0),
                 )
                 self.db.add(extracted_field)
 
@@ -196,30 +206,36 @@ class DrawingService:
 
             # 風船情報を保存
             for balloon_data in result.get("balloons", []):
+                coordinates = balloon_data.get("coordinates", {})
                 balloon = Balloon(
                     drawing_id=drawing.id,
-                    balloon_number=balloon_data["balloon_number"],
+                    balloon_number=balloon_data.get("balloon_number", ""),
                     part_name=balloon_data.get("part_name", ""),
                     quantity=balloon_data.get("quantity", 1),
-                    confidence=balloon_data["confidence"],
-                    x=balloon_data["coordinates"]["x"],
-                    y=balloon_data["coordinates"]["y"],
+                    confidence=balloon_data.get("confidence", 0),
+                    x=coordinates.get("x", 0),
+                    y=coordinates.get("y", 0),
                 )
                 self.db.add(balloon)
 
             # 改訂履歴を保存
             for revision_data in result.get("revisions", []):
+                revision_date = None
+                if revision_data.get("revision_date"):
+                    try:
+                        revision_date = datetime.strptime(
+                            revision_data["revision_date"], "%Y-%m-%d"
+                        ).date()
+                    except (ValueError, TypeError):
+                        logger.warning(f"Invalid revision date format: {revision_data.get('revision_date')}")
+
                 revision = Revision(
                     drawing_id=drawing.id,
-                    revision_number=revision_data["revision_number"],
-                    revision_date=datetime.strptime(
-                        revision_data["revision_date"], "%Y-%m-%d"
-                    ).date()
-                    if revision_data.get("revision_date")
-                    else None,
-                    description=revision_data.get("description", ""),
-                    author=revision_data.get("author", ""),
-                    confidence=revision_data["confidence"],
+                    revision_number=revision_data.get("revision_number", ""),
+                    revision_date=revision_date,
+                    revision_content=revision_data.get("description", revision_data.get("revision_content", "")),
+                    reviser=revision_data.get("author", revision_data.get("reviser", "")),
+                    confidence=revision_data.get("confidence", 0),
                 )
                 self.db.add(revision)
 
@@ -241,7 +257,7 @@ class DrawingService:
             self.db.commit()
             raise
 
-    def get_drawing(self, drawing_id: int) -> Optional[Drawing]:
+    def get_drawing(self, drawing_id: str) -> Optional[Drawing]:
         """
         図面を取得
 
@@ -259,6 +275,8 @@ class DrawingService:
         limit: int = 100,
         status: Optional[str] = None,
         classification: Optional[str] = None,
+        search: Optional[str] = None,
+        tags: Optional[List[str]] = None,
     ) -> List[Drawing]:
         """
         図面リストを取得
@@ -268,6 +286,8 @@ class DrawingService:
             limit: 取得件数
             status: ステータスフィルタ
             classification: 分類フィルタ
+            search: ファイル名検索（部分一致）
+            tags: タグフィルタ
 
         Returns:
             Drawingリスト
@@ -279,6 +299,18 @@ class DrawingService:
             query = query.filter(Drawing.status == status)
         if classification:
             query = query.filter(Drawing.classification == classification)
+        if search:
+            # ファイル名検索（部分一致、大文字小文字無視）
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Drawing.pdf_filename.ilike(search_pattern),
+                    Drawing.original_filename.ilike(search_pattern)
+                )
+            )
+        if tags:
+            # タグフィルタ（いずれかのタグを持つ図面）
+            query = query.join(Tag).filter(Tag.tag_name.in_(tags))
 
         # ページネーション
         query = query.order_by(Drawing.upload_date.desc())
@@ -287,7 +319,7 @@ class DrawingService:
         return query.all()
 
     def update_drawing(
-        self, drawing_id: int, updates: Dict[str, Any]
+        self, drawing_id: str, updates: Dict[str, Any]
     ) -> Optional[Drawing]:
         """
         図面を更新
@@ -308,21 +340,23 @@ class DrawingService:
             if not drawing:
                 raise DrawingServiceException(f"図面が見つかりません: {drawing_id}")
 
-            # 更新前の値を記録
-            old_values = {}
+            # 更新前の値を記録し、編集履歴を作成
+            user_id = socket.gethostname()
 
             for key, value in updates.items():
                 if hasattr(drawing, key):
-                    old_values[key] = getattr(drawing, key)
+                    old_value = getattr(drawing, key)
                     setattr(drawing, key, value)
 
-            # 編集履歴を記録
-            history = EditHistory(
-                drawing_id=drawing_id,
-                edited_by=socket.gethostname(),
-                changes={"old": old_values, "new": updates},
-            )
-            self.db.add(history)
+                    # 各フィールドごとに編集履歴を記録
+                    history = EditHistory(
+                        drawing_id=drawing_id,
+                        user_id=user_id,
+                        field_name=key,
+                        old_value=str(old_value) if old_value is not None else None,
+                        new_value=str(value) if value is not None else None,
+                    )
+                    self.db.add(history)
 
             self.db.commit()
 
@@ -335,7 +369,7 @@ class DrawingService:
             logger.error(f"Failed to update drawing {drawing_id}: {e}")
             raise DrawingServiceException(f"図面更新エラー: {str(e)}") from e
 
-    def delete_drawings(self, drawing_ids: List[int]) -> int:
+    def delete_drawings(self, drawing_ids: List[str]) -> int:
         """
         図面を削除（一括）
 
@@ -377,7 +411,7 @@ class DrawingService:
             logger.error(f"Failed to delete drawings: {e}")
             raise DrawingServiceException(f"図面削除エラー: {str(e)}") from e
 
-    def approve_drawing(self, drawing_id: int) -> Optional[Drawing]:
+    def approve_drawing(self, drawing_id: str) -> Optional[Drawing]:
         """
         図面を承認
 
@@ -392,7 +426,7 @@ class DrawingService:
             {"status": "approved", "approved_date": datetime.utcnow()},
         )
 
-    def unapprove_drawing(self, drawing_id: int) -> Optional[Drawing]:
+    def unapprove_drawing(self, drawing_id: str) -> Optional[Drawing]:
         """
         図面の承認を取り消し
 

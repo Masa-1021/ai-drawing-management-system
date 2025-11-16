@@ -31,14 +31,17 @@ export default function PDFViewer({
   useEffect(() => {
     const loadPdf = async () => {
       try {
+        console.log('[DEBUG] PDFViewer loading PDF from:', pdfUrl);
         setIsLoading(true);
         const loadingTask = pdfjsLib.getDocument(pdfUrl);
         const pdfDoc = await loadingTask.promise;
         setPdf(pdfDoc);
         setTotalPages(pdfDoc.numPages);
+        console.log('[DEBUG] PDF loaded successfully, pages:', pdfDoc.numPages);
         setIsLoading(false);
       } catch (error) {
-        console.error('PDF load error:', error);
+        console.error('[ERROR] PDF load error:', error);
+        console.error('[ERROR] Failed URL:', pdfUrl);
         setIsLoading(false);
       }
     };

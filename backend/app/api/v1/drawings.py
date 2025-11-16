@@ -86,6 +86,8 @@ def list_drawings(
     limit: int = Query(100, ge=1, le=1000),
     status_filter: Optional[str] = Query(None, alias="status"),
     classification: Optional[str] = None,
+    search: Optional[str] = None,
+    tags: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     """
@@ -95,10 +97,21 @@ def list_drawings(
     - **limit**: 取得件数
     - **status**: ステータスフィルタ
     - **classification**: 分類フィルタ
+    - **search**: ファイル名検索（部分一致）
+    - **tags**: タグフィルタ（カンマ区切り）
     """
     service = DrawingService(db)
+
+    # タグをリストに変換
+    tag_list = tags.split(',') if tags else None
+
     drawings = service.list_drawings(
-        skip=skip, limit=limit, status=status_filter, classification=classification
+        skip=skip,
+        limit=limit,
+        status=status_filter,
+        classification=classification,
+        search=search,
+        tags=tag_list
     )
 
     # 総件数取得（簡易版）
@@ -108,7 +121,7 @@ def list_drawings(
 
 
 @router.get("/{drawing_id}", response_model=DrawingResponse)
-def get_drawing(drawing_id: int, db: Session = Depends(get_db)):
+def get_drawing(drawing_id: str, db: Session = Depends(get_db)):
     """
     図面を取得
 
@@ -127,7 +140,7 @@ def get_drawing(drawing_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{drawing_id}", response_model=DrawingResponse)
 def update_drawing(
-    drawing_id: int, updates: DrawingUpdate, db: Session = Depends(get_db)
+    drawing_id: str, updates: DrawingUpdate, db: Session = Depends(get_db)
 ):
     """
     図面を更新
@@ -153,7 +166,7 @@ def update_drawing(
 
 
 @router.put("/{drawing_id}/approve", response_model=DrawingResponse)
-def approve_drawing(drawing_id: int, db: Session = Depends(get_db)):
+def approve_drawing(drawing_id: str, db: Session = Depends(get_db)):
     """
     図面を承認
 
@@ -175,7 +188,7 @@ def approve_drawing(drawing_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{drawing_id}/unapprove", response_model=DrawingResponse)
-def unapprove_drawing(drawing_id: int, db: Session = Depends(get_db)):
+def unapprove_drawing(drawing_id: str, db: Session = Depends(get_db)):
     """
     図面の承認を取り消し
 
@@ -214,7 +227,7 @@ def delete_drawings(request: BulkOperationRequest, db: Session = Depends(get_db)
 
 
 @router.post("/{drawing_id}/reanalyze", response_model=DrawingResponse)
-def reanalyze_drawing(drawing_id: int, db: Session = Depends(get_db)):
+def reanalyze_drawing(drawing_id: str, db: Session = Depends(get_db)):
     """
     図面を再解析
 

@@ -93,7 +93,7 @@ class AIAnalysisService:
                 ]
             )
 
-            prompt = self.prompt_manager.get_prompt(
+            prompt = self.prompt_manager.format_prompt(
                 "extraction", extraction_fields=fields_str
             )
 
@@ -145,7 +145,7 @@ class AIAnalysisService:
             )
 
             # プロンプト取得
-            prompt = self.prompt_manager.get_prompt("classification")
+            prompt = self.prompt_manager.format_prompt("classification")
 
             # Claude API呼び出し
             response = self.claude.invoke_with_image(
@@ -202,7 +202,7 @@ class AIAnalysisService:
             )
 
             # プロンプト取得
-            prompt = self.prompt_manager.get_prompt("balloon_extraction")
+            prompt = self.prompt_manager.format_prompt("balloon_extraction")
 
             # Claude API呼び出し
             response = self.claude.invoke_with_image(
@@ -259,7 +259,7 @@ class AIAnalysisService:
             )
 
             # プロンプト取得
-            prompt = self.prompt_manager.get_prompt("revision_extraction")
+            prompt = self.prompt_manager.format_prompt("revision_extraction")
 
             # Claude API呼び出し
             response = self.claude.invoke_with_image(
@@ -314,7 +314,7 @@ class AIAnalysisService:
             )
 
             # プロンプト取得
-            prompt = self.prompt_manager.get_prompt("summary_extraction")
+            prompt = self.prompt_manager.format_prompt("summary_extraction")
 
             # Claude API呼び出し
             response = self.claude.invoke_with_image(
