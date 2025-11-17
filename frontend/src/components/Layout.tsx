@@ -18,14 +18,14 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-me-grey-light">
       {/* ヘッダー */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white border-b border-me-grey-medium">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* ロゴ */}
             <div className="flex items-center">
-              <Link to="/" className="text-xl font-bold text-blue-600">
+              <Link to="/" className="text-xl font-bold text-me-red">
                 CAD Drawing Manager
               </Link>
             </div>
@@ -36,10 +36,10 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-4 py-2 rounded-me text-sm font-medium transition-colors ${
                     location.pathname === item.path
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-[#FF0000] text-white'
+                      : 'bg-white text-[#333333] border border-[#C4C4C4] hover:bg-[#F2F2F2]'
                   }`}
                 >
                   {item.label}
@@ -54,9 +54,9 @@ export default function Layout({ children }: LayoutProps) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
 
       {/* フッター */}
-      <footer className="bg-white border-t border-gray-200 mt-auto">
+      <footer className="bg-white border-t border-me-grey-medium mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-me-grey-dark">
             © 2024 CAD Drawing Manager. Powered by Claude AI.
           </p>
         </div>

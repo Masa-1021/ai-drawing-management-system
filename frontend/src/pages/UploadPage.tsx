@@ -19,9 +19,7 @@ export default function UploadPage() {
   const { addDrawing, setLoading } = useDrawingStore();
 
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<string>('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const addLog = (level: LogEntry['level'], message: string) => {
@@ -62,27 +60,12 @@ export default function UploadPage() {
       clearLogs();
       addLog('info', `ファイルを選択しました: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
 
-      console.log('[DEBUG] Upload start: setUploadProgress(0)');
+      console.log('[DEBUG] Upload start');
       setIsUploading(true);
       setLoading(true);
-      setUploadProgress(0);
-      setUploadStatus('PDFファイルをアップロード中...');
       addLog('info', 'PDFファイルをサーバーにアップロード中...');
-
-      // 少し待機してUIを更新
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setUploadProgress(10);
-      setUploadStatus('PDF回転を検出・修正中...');
       addLog('info', 'PDF回転を自動検出・修正中...');
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setUploadProgress(20);
-      setUploadStatus('サムネイルを生成中...');
       addLog('info', 'サムネイルを生成中...');
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setUploadProgress(30);
-      setUploadStatus('AI解析を実行中...');
       addLog('info', 'AI解析を実行中（図面情報を自動抽出）...');
 
       console.log('[DEBUG] Call drawingsApi.upload');
@@ -90,9 +73,6 @@ export default function UploadPage() {
 
       console.log('[DEBUG] Upload succeeded:', drawings);
       addLog('success', `アップロード完了: ${drawings.length}ページの図面を処理しました`);
-
-      setUploadProgress(90);
-      setUploadStatus('アップロード完了！');
 
       // ストアに追加
       drawings.forEach((drawing, idx) => {
@@ -102,8 +82,6 @@ export default function UploadPage() {
       });
 
       toast.success(`${drawings.length}ページの図面をアップロードしました`);
-      setUploadProgress(100);
-      setUploadStatus('処理完了');
       addLog('success', '全ての処理が完了しました。一覧ページに移動します...');
 
       // 一覧ページに遷移
@@ -134,8 +112,6 @@ export default function UploadPage() {
       console.log('[DEBUG] Upload finished - cleaning up');
       setIsUploading(false);
       setLoading(false);
-      setUploadProgress(0);
-      setUploadStatus('');
     }
   };
 
@@ -148,18 +124,18 @@ export default function UploadPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">図面アップロード</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <h1 className="text-3xl font-bold text-me-grey-deep">図面アップロード</h1>
+        <p className="mt-2 text-sm text-me-grey-dark">
           PDFファイルをドラッグ&ドロップ、またはクリックして選択してください
         </p>
       </div>
 
       {/* ドロップエリア */}
       <div
-        className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+        className={`relative border-2 border-dashed rounded-me p-12 text-center transition-colors ${
           isDragging
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-me-red bg-me-grey-light'
+            : 'border-me-grey-medium hover:border-me-red'
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -178,7 +154,7 @@ export default function UploadPage() {
 
         <div className="space-y-4">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-me-grey-medium"
             stroke="currentColor"
             fill="none"
             viewBox="0 0 48 48"
@@ -191,44 +167,23 @@ export default function UploadPage() {
             />
           </svg>
 
-          <div className="text-sm text-gray-600">
-            <span className="font-medium text-blue-600">ファイルを選択</span>
+          <div className="text-sm text-me-grey-dark">
+            <span className="font-medium text-me-red">ファイルを選択</span>
             <span className="ml-1">またはドラッグ&ドロップ</span>
           </div>
 
-          <p className="text-xs text-gray-500">PDF (最大50MB)</p>
+          <p className="text-xs text-me-grey-medium">PDF (最大50MB)</p>
         </div>
-
-        {/* アップロード進捗 */}
-        {isUploading && (
-          <div className="mt-6 space-y-3">
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-in-out"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-700">{uploadStatus}</p>
-              <p className="text-sm text-gray-500">{uploadProgress}%</p>
-            </div>
-            <div className="text-xs text-gray-500 space-y-1">
-              <p>• PDFの回転を自動検出・修正しています</p>
-              <p>• AI解析により図面情報を自動抽出しています</p>
-              <p>• この処理には数分かかることがあります</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 操作ログ */}
       {logs.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-me-grey-medium rounded-me p-4">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">操作ログ</h2>
+            <h2 className="text-lg font-semibold text-me-grey-deep">操作ログ</h2>
             <button
               onClick={clearLogs}
-              className="text-sm text-gray-600 hover:text-gray-900"
+              className="text-sm text-me-grey-dark hover:text-me-grey-deep"
             >
               クリア
             </button>
@@ -237,28 +192,28 @@ export default function UploadPage() {
             {logs.map((log, index) => (
               <div
                 key={index}
-                className={`flex items-start space-x-3 text-sm p-2 rounded ${
+                className={`flex items-start space-x-3 text-sm p-2 rounded-me ${
                   log.level === 'error'
-                    ? 'bg-red-50 text-red-700'
+                    ? 'bg-me-red text-white'
                     : log.level === 'success'
-                    ? 'bg-green-50 text-green-700'
+                    ? 'bg-me-grey-light text-me-grey-dark border border-me-grey-medium'
                     : log.level === 'warning'
-                    ? 'bg-yellow-50 text-yellow-700'
-                    : 'bg-gray-50 text-gray-700'
+                    ? 'bg-me-grey-light text-me-grey-dark border border-me-grey-medium'
+                    : 'bg-me-grey-light text-me-grey-dark'
                 }`}
               >
-                <span className="font-mono text-xs text-gray-500 whitespace-nowrap">
+                <span className="font-mono text-xs text-me-grey-medium whitespace-nowrap">
                   {log.timestamp}
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  className={`px-2 py-0.5 rounded-me text-xs font-medium ${
                     log.level === 'error'
-                      ? 'bg-red-100 text-red-800'
+                      ? 'bg-white text-me-red'
                       : log.level === 'success'
-                      ? 'bg-green-100 text-green-800'
+                      ? 'bg-me-grey-medium text-me-grey-dark'
                       : log.level === 'warning'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-blue-100 text-blue-800'
+                      ? 'bg-me-grey-medium text-me-grey-dark'
+                      : 'bg-me-grey-medium text-me-grey-dark'
                   }`}
                 >
                   {log.level.toUpperCase()}

@@ -280,6 +280,55 @@ class AIAnalysisService:
             logger.error(f"Revision extraction error: {str(e)}")
             raise AIAnalysisException(f"改訂履歴抽出エラー: {str(e)}") from e
 
+    def detect_rotation(self, pdf_path: str | Path, page_num: int = 0) -> Dict[str, Any]:
+        """
+        図面の回転角度をAIで検出（画像内容を解析）
+
+        Args:
+            pdf_path: PDFファイルパス
+            page_num: ページ番号
+
+        Returns:
+            {
+                "rotation": 0,
+                "confidence": 95,
+                "reason": "図枠が右下に正しく配置され、文字も正しく読めるため"
+            }
+
+        Raises:
+            AIAnalysisException: 検出エラー
+        """
+        try:
+            logger.info(f"Starting AI rotation detection: {pdf_path}")
+
+            # PDFを画像に変換
+            image_data = self.pdf_converter.pdf_page_to_image(
+                pdf_path, page_num
+            )
+
+            # プロンプト取得
+            prompt = self.prompt_manager.format_prompt("rotation_detection")
+
+            # Claude API呼び出し
+            response = self.claude.invoke_with_image(
+                prompt=prompt, image_data=image_data, image_format="image/png"
+            )
+
+            # JSON解析
+            content = response["content"]
+            result = self._parse_json_response(content)
+
+            logger.info(
+                f"AI rotation detection completed: {result.get('rotation')} degrees "
+                f"(confidence: {result.get('confidence')}%)"
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"AI rotation detection error: {str(e)}")
+            raise AIAnalysisException(f"回転検出エラー: {str(e)}") from e
+
     def generate_summary(
         self, pdf_path: str | Path, page_num: int = 0
     ) -> Dict[str, Any]:

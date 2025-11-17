@@ -79,8 +79,10 @@ class DrawingService:
             hostname = socket.gethostname()
             created_by = hostname
 
-            # PDFを保存
-            new_filename, save_path = self.file_manager.save_pdf(pdf_data, filename)
+            # PDFを保存（AIサービスを渡して画像内容解析による回転検出を有効化）
+            new_filename, save_path = self.file_manager.save_pdf(
+                pdf_data, filename, auto_rotate=True, ai_service=self.ai_service
+            )
             # PDF保存後ファイル存在チェック
             if not save_path or not Path(save_path).exists():
                 logger.error(f"[ERROR] PDF保存失敗: {save_path}")
@@ -249,12 +251,97 @@ class DrawingService:
 
             self.db.commit()
 
+            # ファイル名を解析結果に基づいてリネーム
+            try:
+                self._rename_drawing_file(drawing)
+            except Exception as e:
+                logger.warning(f"Failed to rename file for drawing {drawing.id}: {e}")
+                # ファイル名変更失敗は警告のみ（処理は続行）
+
             logger.info(f"Analysis completed for drawing {drawing.id}")
 
         except Exception as e:
             logger.error(f"Analysis error for drawing {drawing.id}: {e}")
             drawing.status = "failed"
             self.db.commit()
+            raise
+
+    def _rename_drawing_file(self, drawing: Drawing) -> None:
+        """
+        図面ファイルを解析結果に基づいてリネーム
+
+        形式: タイムスタンプ_分類_図番_作成者.pdf
+
+        Args:
+            drawing: Drawingオブジェクト
+        """
+        try:
+            # リレーションシップを確実に読み込む
+            self.db.refresh(drawing, ["extracted_fields"])
+            
+            # 図番を抽出フィールドから取得
+            drawing_number = None
+            for field in drawing.extracted_fields:
+                if field.field_name == "図番" and field.field_value:
+                    drawing_number = field.field_value
+                    break
+
+            # ファイル名を生成
+            new_filename = self.file_manager.generate_drawing_filename(
+                timestamp=drawing.upload_date or datetime.utcnow(),
+                classification=drawing.classification,
+                drawing_number=drawing_number,
+                created_by=drawing.created_by,
+            )
+
+            # ファイルが既に正しい名前の場合はスキップ
+            if drawing.pdf_filename == new_filename:
+                logger.info(f"File already has correct name: {new_filename}")
+                return
+
+            # ファイルをリネーム
+            new_filename, new_path = self.file_manager.rename_pdf(
+                drawing.pdf_filename, new_filename
+            )
+
+            # データベースを更新
+            old_filename = drawing.pdf_filename
+            drawing.pdf_filename = new_filename
+            drawing.pdf_path = new_path
+
+            # サムネイルもリネーム（古いファイル名ベースのサムネイルを新しい名前に）
+            if drawing.thumbnail_path:
+                old_thumbnail_path = Path(self.file_manager.thumbnails_path) / drawing.thumbnail_path
+                if old_thumbnail_path.exists():
+                    # サムネイルファイル名を新しいPDFファイル名に基づいて生成
+                    # generate_thumbnailと同じロジックを使用
+                    new_filename_stem = Path(new_filename).stem
+                    if drawing.page_number > 0:
+                        new_thumbnail_filename = f"{new_filename_stem}_page{drawing.page_number}.png"
+                    else:
+                        new_thumbnail_filename = f"{new_filename_stem}.png"
+                    
+                    new_thumbnail_path = self.file_manager.thumbnails_path / new_thumbnail_filename
+                    # 既に存在する場合はスキップ
+                    if not new_thumbnail_path.exists():
+                        old_thumbnail_path.rename(new_thumbnail_path)
+                        drawing.thumbnail_path = new_thumbnail_filename
+                    else:
+                        logger.warning(f"Thumbnail already exists: {new_thumbnail_filename}")
+
+            self.db.commit()
+
+            logger.info(
+                f"Renamed file for drawing {drawing.id}: "
+                f"{old_filename} -> {new_filename}"
+            )
+
+        except FileNotFoundError as e:
+            logger.warning(f"File not found for renaming: {e}")
+        except FileExistsError as e:
+            logger.warning(f"Target filename already exists: {e}")
+        except Exception as e:
+            logger.error(f"Error renaming file for drawing {drawing.id}: {e}")
             raise
 
     def get_drawing(self, drawing_id: str) -> Optional[Drawing]:

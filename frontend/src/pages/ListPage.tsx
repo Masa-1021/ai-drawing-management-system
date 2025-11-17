@@ -83,17 +83,17 @@ export default function ListPage() {
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { color: string; text: string }> = {
-      pending: { color: 'bg-gray-100 text-gray-700', text: '待機中' },
-      analyzing: { color: 'bg-blue-100 text-blue-700', text: '解析中' },
-      approved: { color: 'bg-green-100 text-green-700', text: '承認済み' },
-      unapproved: { color: 'bg-yellow-100 text-yellow-700', text: '未承認' },
-      failed: { color: 'bg-red-100 text-red-700', text: '失敗' },
+      pending: { color: 'bg-[#F2F2F2] text-[#333333]', text: '待機中' },
+      analyzing: { color: 'bg-[#2A60AD] text-white', text: '解析中' },
+      approved: { color: 'bg-[#FF0000] text-white', text: '承認済み' },
+      unapproved: { color: 'bg-[#333333] text-white', text: '未承認' },
+      failed: { color: 'bg-[#FF0000] text-white', text: '失敗' },
     };
 
     const badge = badges[status] || badges.unapproved;
 
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded ${badge.color}`}>
+      <span className={`px-2 py-1 text-xs font-medium rounded-me ${badge.color} shadow-sm`}>
         {badge.text}
       </span>
     );
@@ -103,8 +103,8 @@ export default function ListPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-sm text-gray-600">読み込み中...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-me-red mx-auto"></div>
+          <p className="mt-4 text-sm text-me-grey-dark">読み込み中...</p>
         </div>
       </div>
     );
@@ -124,25 +124,25 @@ export default function ListPage() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">図面一覧</h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <h1 className="text-3xl font-bold text-me-grey-deep">図面一覧</h1>
+              <p className="text-sm text-me-grey-dark mt-1">
                 {drawings.length}件の図面
               </p>
             </div>
             <button
               onClick={loadDrawings}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="px-4 py-3 bg-[#FF0000] text-white rounded-me hover:bg-[#FF3333] transition-colors font-medium"
             >
               更新
             </button>
           </div>
 
           {drawings.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-              <p className="text-gray-500">図面がありません</p>
+            <div className="text-center py-12 bg-white rounded-me border border-me-grey-medium">
+              <p className="text-me-grey-dark">図面がありません</p>
               <button
                 onClick={() => navigate('/upload')}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="mt-4 px-4 py-3 bg-[#FF0000] text-white rounded-me hover:bg-[#FF3333] font-medium"
               >
                 図面をアップロード
               </button>
@@ -152,11 +152,11 @@ export default function ListPage() {
               {drawings.map((drawing) => (
                 <div
                   key={drawing.id}
-                  className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  className="bg-white rounded-me border border-me-grey-medium overflow-hidden hover:border-me-red transition-colors cursor-pointer"
                   onClick={() => navigate(`/edit/${drawing.id}`)}
                 >
                   {/* サムネイル */}
-                  <div className="h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
+                  <div className="h-48 bg-me-grey-light flex items-center justify-center overflow-hidden relative">
                     {drawing.thumbnail_path ? (
                       <img
                         src={`http://localhost:8000/storage/thumbnails/${drawing.thumbnail_path}`}
@@ -164,22 +164,25 @@ export default function ListPage() {
                         className="w-full h-full object-contain"
                       />
                     ) : (
-                      <span className="text-gray-400">サムネイル</span>
+                      <span className="text-me-grey-medium">サムネイル</span>
                     )}
+                    {/* 承認状態バッジ（サムネイル右下） */}
+                    <div className="absolute bottom-2 right-2">
+                      {getStatusBadge(drawing.status)}
+                    </div>
                   </div>
 
                   {/* 情報 */}
                   <div className="p-4 space-y-2">
                     <div className="flex justify-between items-start">
-                      <h3 className="font-medium text-gray-900 truncate">
+                      <h3 className="font-medium text-me-grey-deep truncate">
                         {drawing.pdf_filename}
                       </h3>
-                      {getStatusBadge(drawing.status)}
                     </div>
 
-                    <div className="text-sm text-gray-600 space-y-1">
+                    <div className="text-sm text-me-grey-dark space-y-1">
                       {drawing.original_filename && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-me-grey-medium">
                           元のファイル名: {drawing.original_filename}
                         </p>
                       )}
@@ -193,7 +196,7 @@ export default function ListPage() {
                           {drawing.tags.map((tag) => (
                             <span
                               key={tag.id}
-                              className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded"
+                              className="px-2 py-0.5 text-xs bg-me-grey-light text-me-grey-dark rounded-me border border-me-grey-medium"
                             >
                               {tag.tag_name}
                             </span>
@@ -202,7 +205,7 @@ export default function ListPage() {
                       )}
                     </div>
 
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-me-grey-medium">
                       {new Date(drawing.upload_date).toLocaleString('ja-JP')}
                     </div>
                   </div>

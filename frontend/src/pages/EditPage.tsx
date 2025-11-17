@@ -164,8 +164,8 @@ export default function EditPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-sm text-gray-600">読み込み中...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-me-red mx-auto"></div>
+          <p className="mt-4 text-sm text-me-grey-dark">読み込み中...</p>
         </div>
       </div>
     );
@@ -174,10 +174,10 @@ export default function EditPage() {
   if (!selectedDrawing) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">図面が見つかりません</p>
+        <p className="text-me-grey-dark">図面が見つかりません</p>
         <button
           onClick={() => navigate('/list')}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="mt-4 px-4 py-3 bg-[#FF0000] text-white rounded-me hover:bg-[#FF3333] font-medium"
         >
           一覧に戻る
         </button>
@@ -204,21 +204,21 @@ export default function EditPage() {
       {/* ヘッダー */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-me-grey-deep">
             {selectedDrawing.pdf_filename}
           </h1>
           {selectedDrawing.original_filename && (
-            <p className="text-xs text-gray-500 mt-1">元のファイル名: {selectedDrawing.original_filename}</p>
+            <p className="text-xs text-me-grey-medium mt-1">元のファイル名: {selectedDrawing.original_filename}</p>
           )}
           {isLocked && lockedBy && (
-            <div className="mt-2 px-3 py-1 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-md inline-block">
+            <div className="mt-2 px-3 py-1 bg-me-grey-light border border-me-grey-medium text-me-grey-dark rounded-me inline-block">
               🔒 {lockedBy}が編集中（読み取り専用）
             </div>
           )}
         </div>
         <button
           onClick={() => navigate('/list')}
-          className="px-4 py-2 text-gray-600 hover:text-gray-900"
+          className="px-4 py-2 text-me-grey-dark hover:text-me-grey-deep"
         >
           ← 一覧に戻る
         </button>

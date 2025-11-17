@@ -43,43 +43,43 @@ export default function EditForm({
   };
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 90) return 'text-green-600';
-    if (confidence >= 70) return 'text-yellow-600';
-    return 'text-red-600';
+    if (confidence >= 90) return 'text-me-grey-dark';
+    if (confidence >= 70) return 'text-me-grey-dark';
+    return 'text-me-red';
   };
 
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* 基本情報 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold mb-4">基本情報</h3>
+        <div className="bg-white rounded-me border border-me-grey-medium p-6">
+          <h3 className="text-lg font-semibold mb-4 text-me-grey-deep">基本情報</h3>
 
           <div className="space-y-4">
             {/* ファイル名 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-me-grey-dark mb-1">
                 ファイル名（編集可能）
               </label>
               <input
                 type="text"
                 {...register('pdf_filename')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-me-grey-medium rounded-me focus:ring-me-red focus:border-me-red"
                 disabled={disabled}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-me-grey-medium mt-1">
                 元のファイル名: {drawing.original_filename}
               </p>
             </div>
 
             {/* 分類 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-me-grey-dark mb-1">
                 分類
               </label>
               <select
                 {...register('classification')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-me-grey-medium rounded-me focus:ring-me-red focus:border-me-red"
               >
                 <option value="">未分類</option>
                 <option value="部品図">部品図</option>
@@ -99,21 +99,21 @@ export default function EditForm({
 
             {/* 要約 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-me-grey-dark mb-1">
                 要約
               </label>
               <textarea
                 {...register('summary')}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-me-grey-medium rounded-me focus:ring-me-red focus:border-me-red"
               />
             </div>
           </div>
         </div>
 
         {/* 抽出フィールド */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold mb-4">
+        <div className="bg-white rounded-me border border-me-grey-medium p-6">
+          <h3 className="text-lg font-semibold mb-4 text-me-grey-deep">
             抽出フィールド ({drawing.extracted_fields.length}件)
           </h3>
 
@@ -121,16 +121,16 @@ export default function EditForm({
             {drawing.extracted_fields.map((field, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                className="flex items-center justify-between p-3 bg-me-grey-light rounded-me border border-me-grey-medium"
               >
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-me-grey-dark">
                     {field.field_name}
                   </label>
                   <input
                     type="text"
                     defaultValue={field.field_value}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    className="mt-1 w-full px-3 py-2 border border-me-grey-medium rounded-me text-sm"
                   />
                 </div>
                 <div className="ml-4">
@@ -142,7 +142,7 @@ export default function EditForm({
                     {field.confidence}%
                   </span>
                   {field.confidence < 70 && (
-                    <p className="text-xs text-red-600 mt-1">要確認</p>
+                    <p className="text-xs text-me-red mt-1">要確認</p>
                   )}
                 </div>
               </div>
@@ -152,35 +152,35 @@ export default function EditForm({
 
         {/* 風船情報 */}
         {drawing.balloons.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold mb-4">
+          <div className="bg-white rounded-me border border-me-grey-medium p-6">
+            <h3 className="text-lg font-semibold mb-4 text-me-grey-deep">
               風船情報 ({drawing.balloons.length}件)
             </h3>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-me-grey-medium">
+                <thead className="bg-me-grey-light">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
                       番号
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
                       部品名
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
                       数量
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
                       信頼度
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-me-grey-medium">
                   {drawing.balloons.map((balloon, index) => (
-                    <tr key={index}>
-                      <td className="px-3 py-2 text-sm">{balloon.balloon_number}</td>
-                      <td className="px-3 py-2 text-sm">{balloon.part_name || '-'}</td>
-                      <td className="px-3 py-2 text-sm">{balloon.quantity}</td>
+                    <tr key={index} className="even:bg-me-grey-light">
+                      <td className="px-3 py-2 text-sm text-me-grey-dark">{balloon.balloon_number}</td>
+                      <td className="px-3 py-2 text-sm text-me-grey-dark">{balloon.part_name || '-'}</td>
+                      <td className="px-3 py-2 text-sm text-me-grey-dark">{balloon.quantity}</td>
                       <td className="px-3 py-2 text-sm">
                         <span className={getConfidenceColor(balloon.confidence)}>
                           {balloon.confidence}%
@@ -202,7 +202,7 @@ export default function EditForm({
                 type="button"
                 onClick={onApprove}
                 disabled={disabled}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="px-4 py-3 bg-[#FF0000] text-white rounded-me hover:bg-[#FF3333] disabled:bg-[#C4C4C4] disabled:cursor-not-allowed font-medium"
               >
                 承認
               </button>
@@ -212,7 +212,7 @@ export default function EditForm({
                 type="button"
                 onClick={onReject}
                 disabled={disabled}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="px-4 py-3 bg-[#333333] text-white rounded-me hover:bg-[#555555] disabled:bg-[#C4C4C4] disabled:cursor-not-allowed font-medium"
               >
                 却下
               </button>
@@ -222,7 +222,7 @@ export default function EditForm({
           <button
             type="submit"
             disabled={disabled}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-[#FF0000] text-white rounded-me hover:bg-[#FF3333] disabled:bg-[#C4C4C4] disabled:cursor-not-allowed font-medium"
           >
             保存
           </button>

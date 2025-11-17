@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 三菱電機ブランドカラー CSS変数 */
+:root {
+  --me-red: #ff0000;
+  --me-grey-light: #f2f2f2;
+  --me-grey-medium: #c4c4c4;
+  --me-grey-dark: #333333;
+  --me-grey-deep: #111111;
+  --me-blue: #2a60ad;
+  --me-steel-blue: #496781;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -9,14 +20,16 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Noto Sans JP', 'Yu Gothic', 'YuGothic', 'Hiragino Kaku Gothic ProN', 
+    'Hiragino Sans', 'Meiryo', 'MS PGothic', -apple-system, BlinkMacSystemFont, 
+    'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--me-grey-light);
+  color: var(--me-grey-dark);
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: 'Source Han Code JP', 'Noto Sans Mono CJK JP', 'Consolas', 
+    'Monaco', 'Courier New', monospace;
 }

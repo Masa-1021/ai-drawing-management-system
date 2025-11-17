@@ -118,10 +118,10 @@ export default function PDFViewer({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96 bg-gray-100 rounded">
+      <div className="flex items-center justify-center h-96 bg-me-grey-light rounded-me">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-sm text-gray-600">PDF読み込み中...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-me-red mx-auto"></div>
+          <p className="mt-4 text-sm text-me-grey-dark">PDF読み込み中...</p>
         </div>
       </div>
     );
@@ -130,23 +130,23 @@ export default function PDFViewer({
   return (
     <div className="space-y-4">
       {/* コントロールバー */}
-      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3">
+      <div className="flex items-center justify-between bg-white border border-me-grey-medium rounded-me p-3">
         {/* ページコントロール */}
         <div className="flex items-center space-x-2">
           <button
             onClick={handlePrevPage}
             disabled={currentPage === 1}
-            className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1 bg-me-grey-light rounded-me hover:bg-me-grey-medium disabled:opacity-50 disabled:cursor-not-allowed text-me-grey-dark"
           >
             &lt;
           </button>
-          <span className="text-sm">
+          <span className="text-sm text-me-grey-dark">
             {currentPage} / {totalPages}
           </span>
           <button
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1 bg-me-grey-light rounded-me hover:bg-me-grey-medium disabled:opacity-50 disabled:cursor-not-allowed text-me-grey-dark"
           >
             &gt;
           </button>
@@ -156,20 +156,20 @@ export default function PDFViewer({
         <div className="flex items-center space-x-2">
           <button
             onClick={handleZoomOut}
-            className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+            className="px-3 py-1 bg-me-grey-light rounded-me hover:bg-me-grey-medium text-me-grey-dark"
           >
             -
           </button>
-          <span className="text-sm">{Math.round(scale * 100)}%</span>
+          <span className="text-sm text-me-grey-dark">{Math.round(scale * 100)}%</span>
           <button
             onClick={handleZoomIn}
-            className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+            className="px-3 py-1 bg-me-grey-light rounded-me hover:bg-me-grey-medium text-me-grey-dark"
           >
             +
           </button>
           <button
             onClick={handleFitToWidth}
-            className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm"
+            className="px-3 py-1 bg-me-grey-light rounded-me hover:bg-me-grey-medium text-sm text-me-grey-dark"
           >
             幅に合わせる
           </button>
@@ -179,7 +179,7 @@ export default function PDFViewer({
         <div>
           <button
             onClick={handleRotate}
-            className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+            className="px-3 py-1 bg-me-grey-light rounded-me hover:bg-me-grey-medium text-me-grey-dark"
           >
             回転
           </button>
@@ -187,7 +187,7 @@ export default function PDFViewer({
       </div>
 
       {/* PDFキャンバス */}
-      <div className="bg-gray-100 rounded-lg overflow-auto" style={{ maxHeight: '800px' }}>
+      <div className="bg-me-grey-light rounded-me overflow-auto" style={{ maxHeight: '800px' }}>
         <canvas ref={canvasRef} className="mx-auto" />
       </div>
     </div>
