@@ -50,12 +50,16 @@ class ExtractedFieldSchema(BaseModel):
 class BalloonSchema(BaseModel):
     """風船スキーマ"""
 
-    balloon_number: str
-    part_name: Optional[str] = None
-    quantity: Optional[int] = 1
+    balloon_number: Optional[str] = None  # 後方互換性のため保持
+    part_name: Optional[str] = None  # 後方互換性のため保持
+    quantity: Optional[int] = None  # 後方互換性のため保持
+    upper_text: Optional[str] = None  # 風船上部のテキスト
+    lower_text: Optional[str] = None  # 風船下部のテキスト
+    adjacent_text: Optional[str] = None  # 風船周辺のテキスト（型式、品名など）
+    adjacent_position: Optional[str] = None  # 付随テキストの位置
     confidence: int
-    x: int
-    y: int
+    x: float  # 座標は小数点を含む
+    y: float  # 座標は小数点を含む
 
     class Config:
         from_attributes = True
@@ -65,7 +69,7 @@ class RevisionSchema(BaseModel):
     """改訂履歴スキーマ"""
 
     revision_number: str
-    revision_date: Optional[datetime] = None
+    revision_date: Optional[str] = None  # 文字列として扱う
     description: Optional[str] = None
     author: Optional[str] = None
     confidence: int
@@ -85,12 +89,26 @@ class TagSchema(BaseModel):
         from_attributes = True
 
 
+class SpecSheetItemInfo(BaseModel):
+    """摘要表部品情報（図面一覧表示用）"""
+    id: str
+    row_number: int
+    part_name: Optional[str] = None
+    drawing_number: Optional[str] = None
+    part_type: Optional[str] = None
+    spec_sheet_id: Optional[str] = None
+    spec_number: Optional[str] = None
+    equipment_name: Optional[str] = None
+    line_name: Optional[str] = None
+
+
 class DrawingResponse(DrawingBase):
     """図面レスポンススキーマ"""
 
     id: str  # UUID
     pdf_path: str  # 実際のファイルパス
     thumbnail_path: Optional[str] = None
+    rotation: Optional[int] = 0  # AIで検出された回転角度 (0, 90, 180, 270)
     upload_date: datetime
     analyzed_at: Optional[datetime] = None
     approved_date: Optional[datetime] = None
@@ -98,6 +116,11 @@ class DrawingResponse(DrawingBase):
     classification_confidence: Optional[int] = None
     summary: Optional[str] = None
     shape_features: Optional[Dict[str, Any]] = None
+
+    # 摘要表関連
+    spec_sheet_item_id: Optional[str] = None
+    spec_number: Optional[str] = None
+    spec_sheet_item: Optional[SpecSheetItemInfo] = None
 
     # リレーション
     extracted_fields: List[ExtractedFieldSchema] = []
@@ -121,3 +144,25 @@ class BulkOperationRequest(BaseModel):
 
     drawing_ids: List[str] = Field(..., min_length=1)  # UUID
     value: Optional[str] = None
+
+
+class EditHistorySchema(BaseModel):
+    """編集履歴スキーマ"""
+
+    id: int
+    drawing_id: str
+    user_id: str
+    field_name: str
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EditHistoryListResponse(BaseModel):
+    """編集履歴リストレスポンス"""
+
+    total: int
+    items: List[EditHistorySchema]

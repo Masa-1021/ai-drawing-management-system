@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # バックエンドAPI（開発環境）
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cad-backend-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_PROFILE=${AWS_PROFILE:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-}
+      - AWS_SSO_START_URL=${AWS_SSO_START_URL:-}
+      - MODEL_ID=${MODEL_ID}
+      - DATABASE_URL=sqlite:////app/storage/database.db
+      - LOG_LEVEL=DEBUG
+      # Oracle Database Configuration
+      - ORACLE_HOST=${ORACLE_HOST}
+      - ORACLE_PORT=${ORACLE_PORT:-1521}
+      - ORACLE_SERVICE_NAME=${ORACLE_SERVICE_NAME}
+      - ORACLE_USER=${ORACLE_USER}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - ORACLE_STA_NO1=${ORACLE_STA_NO1}
+      - ORACLE_POOL_MIN=${ORACLE_POOL_MIN:-2}
+      - ORACLE_POOL_MAX=${ORACLE_POOL_MAX:-10}
+      - ORACLE_CONNECTION_TIMEOUT=${ORACLE_CONNECTION_TIMEOUT:-30}
+    volumes:
+      - ./backend:/app
+      - ./storage:/app/storage
+      - ./config.json:/app/config.json:ro
+      # AWS SSO認証情報をマウント（プロファイル使用時、書き込み可能）
+      - ~/.aws:/root/.aws
+    command: uvicorn app.main:combined_asgi_app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    networks:
+      - cad-network
+
+  # フロントエンド（開発環境）
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: cad-frontend-dev
+    ports:
+      - "5175:5175"
+    environment:
+      - VITE_API_BASE_URL=/api
+      - VITE_WS_BASE_URL=/ws
+      - VITE_API_PROXY_TARGET=http://backend:8000
+      - VITE_WS_PROXY_TARGET=ws://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+    networks:
+      - cad-network
+    depends_on:
+      - backend
+
+networks:
+  cad-network:
+    driver: bridge

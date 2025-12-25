@@ -1,7 +1,6 @@
-from sqlalchemy import Column, String, Text, Float, JSON, TIMESTAMP, Integer
+from sqlalchemy import Column, String, Text, Float, JSON, TIMESTAMP, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import datetime
 import uuid
 
 from ..database import Base
@@ -26,21 +25,28 @@ class Drawing(Base):
     classification_reason = Column(Text)
     summary = Column(Text)  # 図面の要約
     shape_features = Column(JSON)  # プレート図の特徴
+    rotation = Column(Integer, default=0)  # AI検出された回転角度 (0, 90, 180, 270)
     upload_date = Column(TIMESTAMP, default=func.now())
+    analyzed_at = Column(TIMESTAMP)  # AI解析完了日時
     approved_date = Column(TIMESTAMP)
     created_by = Column(String, nullable=False)  # PCホスト名/ユーザー名
     updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())
 
+    # 設備関連
+    equipment_id = Column(String, ForeignKey("equipments.id"), nullable=True)  # 設備ID（NULL許容）
+
+    # 摘要表関連
+    spec_sheet_item_id = Column(String, ForeignKey("spec_sheet_items.id"), nullable=True)  # 摘要表部品ID
+    spec_number = Column(String, nullable=True)  # 摘番
+
     # リレーションシップ
+    equipment = relationship("Equipment", back_populates="drawings")
+    spec_sheet_item = relationship("SpecSheetItem", back_populates="linked_drawing")
     extracted_fields = relationship(
         "ExtractedField", back_populates="drawing", cascade="all, delete-orphan"
     )
-    balloons = relationship(
-        "Balloon", back_populates="drawing", cascade="all, delete-orphan"
-    )
-    revisions = relationship(
-        "Revision", back_populates="drawing", cascade="all, delete-orphan"
-    )
+    balloons = relationship("Balloon", back_populates="drawing", cascade="all, delete-orphan")
+    revisions = relationship("Revision", back_populates="drawing", cascade="all, delete-orphan")
     tags = relationship("Tag", back_populates="drawing", cascade="all, delete-orphan")
     edit_history = relationship(
         "EditHistory", back_populates="drawing", cascade="all, delete-orphan"

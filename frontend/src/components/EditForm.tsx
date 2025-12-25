@@ -3,7 +3,7 @@
  */
 
 import { useForm } from 'react-hook-form';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Drawing } from '../types/drawing';
 
 interface EditFormProps {
@@ -12,6 +12,7 @@ interface EditFormProps {
   onApprove?: () => void;
   onReject?: () => void;
   disabled?: boolean;
+  onBalloonClick?: (balloon: { x: number; y: number; width: number; height: number }) => void;
 }
 
 export default function EditForm({
@@ -20,7 +21,10 @@ export default function EditForm({
   onApprove,
   onReject,
   disabled = false,
+  onBalloonClick,
 }: EditFormProps) {
+  const [activeTab, setActiveTab] = useState<'fields' | 'balloons'>('fields');
+
   const { register, handleSubmit, reset } = useForm({
     defaultValues: {
       pdf_filename: drawing.pdf_filename || '',
@@ -111,88 +115,153 @@ export default function EditForm({
           </div>
         </div>
 
-        {/* 抽出フィールド */}
-        <div className="bg-white rounded-me border border-me-grey-medium p-6">
-          <h3 className="text-lg font-semibold mb-4 text-me-grey-deep">
-            抽出フィールド ({drawing.extracted_fields.length}件)
-          </h3>
+        {/* タブUI: 抽出フィールドと風船情報 */}
+        <div className="bg-white rounded-me border border-me-grey-medium">
+          {/* タブヘッダー */}
+          <div className="flex border-b border-me-grey-medium">
+            <button
+              type="button"
+              onClick={() => setActiveTab('fields')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'fields'
+                  ? 'bg-me-red text-white border-b-2 border-me-red'
+                  : 'text-me-grey-dark hover:bg-me-grey-light'
+              }`}
+            >
+              抽出フィールド
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('balloons')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'balloons'
+                  ? 'bg-me-red text-white border-b-2 border-me-red'
+                  : 'text-me-grey-dark hover:bg-me-grey-light'
+              }`}
+            >
+              風船情報
+            </button>
+          </div>
 
-          <div className="space-y-3">
-            {drawing.extracted_fields.map((field, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-me-grey-light rounded-me border border-me-grey-medium"
-              >
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-me-grey-dark">
-                    {field.field_name}
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue={field.field_value}
-                    className="mt-1 w-full px-3 py-2 border border-me-grey-medium rounded-me text-sm"
-                  />
-                </div>
-                <div className="ml-4">
-                  <span
-                    className={`text-sm font-medium ${getConfidenceColor(
-                      field.confidence
-                    )}`}
+          {/* タブコンテンツ */}
+          <div className="p-6">
+            {/* 抽出フィールドタブ */}
+            {activeTab === 'fields' && (
+              <div className="space-y-3">
+                {drawing.extracted_fields.map((field, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-me-grey-light rounded-me border border-me-grey-medium"
                   >
-                    {field.confidence}%
-                  </span>
-                  {field.confidence < 70 && (
-                    <p className="text-xs text-me-red mt-1">要確認</p>
-                  )}
-                </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-me-grey-dark">
+                        {field.field_name}
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue={field.field_value}
+                        className="mt-1 w-full px-3 py-2 border border-me-grey-medium rounded-me text-sm"
+                      />
+                    </div>
+                    <div className="ml-4">
+                      <span
+                        className={`text-sm font-medium ${getConfidenceColor(
+                          field.confidence
+                        )}`}
+                      >
+                        {field.confidence}%
+                      </span>
+                      {field.confidence < 70 && (
+                        <p className="text-xs text-me-red mt-1">要確認</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* 風船情報タブ */}
+            {activeTab === 'balloons' && (
+              <>
+                {drawing.balloons.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-me-grey-medium">
+                      <thead className="bg-me-grey-light">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
+                            上部
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
+                            下部
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
+                            付随情報
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
+                            信頼度
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-me-grey-medium">
+                        {drawing.balloons.map((balloon, index) => {
+                          // 座標情報を取得（coordinatesまたはx,yから）
+                          const hasCoordinates = balloon.coordinates || (balloon.x !== undefined && balloon.y !== undefined);
+                          const coords = balloon.coordinates || {
+                            x: balloon.x || 0,
+                            y: balloon.y || 0,
+                            width: 50, // デフォルトの幅
+                            height: 50, // デフォルトの高さ
+                          };
+
+                          return (
+                            <tr
+                              key={index}
+                              onClick={() => {
+                                if (onBalloonClick && hasCoordinates) {
+                                  onBalloonClick(coords);
+                                }
+                              }}
+                              className={`even:bg-me-grey-light ${
+                                hasCoordinates && onBalloonClick
+                                  ? 'cursor-pointer hover:bg-me-red hover:bg-opacity-10 transition-colors'
+                                  : ''
+                              }`}
+                            >
+                            <td className="px-3 py-2 text-sm text-me-grey-dark font-medium">
+                              {balloon.upper_text ?? balloon.balloon_number ?? '-'}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-me-grey-dark">
+                              {balloon.lower_text ?? balloon.quantity?.toString() ?? '-'}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-me-grey-dark">
+                              {balloon.adjacent_text ? (
+                                <span title={`位置: ${balloon.adjacent_position || '不明'}`}>
+                                  {balloon.adjacent_text}
+                                </span>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-sm">
+                              <span className={getConfidenceColor(balloon.confidence)}>
+                                {balloon.confidence}%
+                              </span>
+                            </td>
+                          </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-me-grey-medium">
+                    風船情報がありません
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
-
-        {/* 風船情報 */}
-        {drawing.balloons.length > 0 && (
-          <div className="bg-white rounded-me border border-me-grey-medium p-6">
-            <h3 className="text-lg font-semibold mb-4 text-me-grey-deep">
-              風船情報 ({drawing.balloons.length}件)
-            </h3>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-me-grey-medium">
-                <thead className="bg-me-grey-light">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
-                      番号
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
-                      部品名
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
-                      数量
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-me-grey-dark">
-                      信頼度
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-me-grey-medium">
-                  {drawing.balloons.map((balloon, index) => (
-                    <tr key={index} className="even:bg-me-grey-light">
-                      <td className="px-3 py-2 text-sm text-me-grey-dark">{balloon.balloon_number}</td>
-                      <td className="px-3 py-2 text-sm text-me-grey-dark">{balloon.part_name || '-'}</td>
-                      <td className="px-3 py-2 text-sm text-me-grey-dark">{balloon.quantity}</td>
-                      <td className="px-3 py-2 text-sm">
-                        <span className={getConfidenceColor(balloon.confidence)}>
-                          {balloon.confidence}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
         {/* アクションボタン */}
         <div className="flex justify-between items-center">

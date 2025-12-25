@@ -12,8 +12,8 @@ Claude APIを使用してCAD図面を解析する
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from app.services.claude_client import ClaudeClient, ClaudeClientError
+from typing import Dict, Any, Optional
+from app.services.claude_client import ClaudeClient
 from app.services.pdf_converter import PDFConverter
 from app.utils.prompt_manager import PromptManager
 from app.utils.config_manager import ConfigManager
@@ -47,17 +47,40 @@ class AIAnalysisService:
             prompt_manager: プロンプトマネージャー
         """
         self.config = config_manager or ConfigManager()
-        self.claude = claude_client or ClaudeClient(
-            region=self.config.aws_region, model_id=self.config.model_id
-        )
+
+        # AWS認証情報の確認（プロファイル or アクセスキー）
+        has_profile = bool(self.config.aws_profile)
+        has_credentials = bool(self.config.aws_access_key_id and self.config.aws_secret_access_key)
+
+        if not has_profile and not has_credentials:
+            error_msg = (
+                "AWS認証情報が設定されていません。"
+                ".envファイルにAWS_PROFILE（SSO用）またはAWS_ACCESS_KEY_IDとAWS_SECRET_ACCESS_KEYを設定してください。"
+            )
+            logger.error(error_msg)
+            raise AIAnalysisException(error_msg)
+
+        # ClaudeClientの初期化（接続テストも実行される）
+        try:
+            self.claude = claude_client or ClaudeClient(
+                region=self.config.aws_region,
+                model_id=self.config.model_id,
+                aws_profile=self.config.aws_profile if has_profile else None,
+                aws_access_key_id=self.config.aws_access_key_id if has_credentials else None,
+                aws_secret_access_key=self.config.aws_secret_access_key if has_credentials else None,
+                aws_session_token=self.config.aws_session_token if has_credentials else None,
+            )
+        except Exception as e:
+            error_msg = f"AI接続の初期化に失敗しました: {str(e)}"
+            logger.error(error_msg)
+            raise AIAnalysisException(error_msg) from e
+
         self.pdf_converter = pdf_converter or PDFConverter()
         self.prompt_manager = prompt_manager or PromptManager()
 
-        logger.info("AIAnalysisService initialized")
+        logger.info("AIAnalysisService initialized successfully")
 
-    def analyze_drawing(
-        self, pdf_path: str | Path, page_num: int = 0
-    ) -> Dict[str, Any]:
+    def analyze_drawing(self, pdf_path: str | Path, page_num: int = 0) -> Dict[str, Any]:
         """
         図面を解析（図枠情報抽出）
 
@@ -80,9 +103,7 @@ class AIAnalysisService:
             logger.info(f"Starting drawing analysis: {pdf_path}, page {page_num}")
 
             # PDFを画像に変換
-            image_data = self.pdf_converter.pdf_page_to_image(
-                pdf_path, page_num
-            )
+            image_data = self.pdf_converter.pdf_page_to_image(pdf_path, page_num)
 
             # プロンプト取得
             extraction_fields_config = self.config.extraction_fields
@@ -93,9 +114,7 @@ class AIAnalysisService:
                 ]
             )
 
-            prompt = self.prompt_manager.format_prompt(
-                "extraction", extraction_fields=fields_str
-            )
+            prompt = self.prompt_manager.format_prompt("extraction", extraction_fields=fields_str)
 
             # Claude API呼び出し
             response = self.claude.invoke_with_image(
@@ -116,9 +135,7 @@ class AIAnalysisService:
             logger.error(f"Drawing analysis error: {str(e)}")
             raise AIAnalysisException(f"図面解析エラー: {str(e)}") from e
 
-    def classify_drawing(
-        self, pdf_path: str | Path, page_num: int = 0
-    ) -> Dict[str, Any]:
+    def classify_drawing(self, pdf_path: str | Path, page_num: int = 0) -> Dict[str, Any]:
         """
         図面を分類
 
@@ -140,9 +157,7 @@ class AIAnalysisService:
             logger.info(f"Starting drawing classification: {pdf_path}")
 
             # PDFを画像に変換
-            image_data = self.pdf_converter.pdf_page_to_image(
-                pdf_path, page_num
-            )
+            image_data = self.pdf_converter.pdf_page_to_image(pdf_path, page_num)
 
             # プロンプト取得
             prompt = self.prompt_manager.format_prompt("classification")
@@ -167,7 +182,7 @@ class AIAnalysisService:
             raise AIAnalysisException(f"分類エラー: {str(e)}") from e
 
     def extract_balloons(
-        self, pdf_path: str | Path, page_num: int = 0
+        self, pdf_path: str | Path, page_num: int = 0, rotation_angle: int = 0
     ) -> Dict[str, Any]:
         """
         風船情報を抽出
@@ -175,6 +190,7 @@ class AIAnalysisService:
         Args:
             pdf_path: PDFファイルパス
             page_num: ページ番号
+            rotation_angle: 回転角度（0, 90, 180, 270）- 正しい向きにするための回転
 
         Returns:
             {
@@ -194,11 +210,11 @@ class AIAnalysisService:
             AIAnalysisException: 抽出エラー
         """
         try:
-            logger.info(f"Starting balloon extraction: {pdf_path}")
+            logger.info(f"Starting balloon extraction: {pdf_path} (rotation: {rotation_angle})")
 
-            # PDFを画像に変換
+            # PDFを画像に変換（回転補正を適用）
             image_data = self.pdf_converter.pdf_page_to_image(
-                pdf_path, page_num
+                pdf_path, page_num, rotation_angle=rotation_angle
             )
 
             # プロンプト取得
@@ -223,9 +239,7 @@ class AIAnalysisService:
             logger.error(f"Balloon extraction error: {str(e)}")
             raise AIAnalysisException(f"風船抽出エラー: {str(e)}") from e
 
-    def extract_revisions(
-        self, pdf_path: str | Path, page_num: int = 0
-    ) -> Dict[str, Any]:
+    def extract_revisions(self, pdf_path: str | Path, page_num: int = 0) -> Dict[str, Any]:
         """
         改訂履歴を抽出
 
@@ -254,9 +268,7 @@ class AIAnalysisService:
             logger.info(f"Starting revision extraction: {pdf_path}")
 
             # PDFを画像に変換
-            image_data = self.pdf_converter.pdf_page_to_image(
-                pdf_path, page_num
-            )
+            image_data = self.pdf_converter.pdf_page_to_image(pdf_path, page_num)
 
             # プロンプト取得
             prompt = self.prompt_manager.format_prompt("revision_extraction")
@@ -302,8 +314,11 @@ class AIAnalysisService:
             logger.info(f"Starting AI rotation detection: {pdf_path}")
 
             # PDFを画像に変換
+            # ignore_rotation=True: PDFメタデータの回転を無視し、生のコンテンツをAIに見せる
+            # AIが実際の画像内容を見て「正しい向きにするには○度回転が必要」と判定する
+            # その結果に基づいてPDFコンテンツ自体を回転補正する
             image_data = self.pdf_converter.pdf_page_to_image(
-                pdf_path, page_num
+                pdf_path, page_num, ignore_rotation=True
             )
 
             # プロンプト取得
@@ -329,9 +344,7 @@ class AIAnalysisService:
             logger.error(f"AI rotation detection error: {str(e)}")
             raise AIAnalysisException(f"回転検出エラー: {str(e)}") from e
 
-    def generate_summary(
-        self, pdf_path: str | Path, page_num: int = 0
-    ) -> Dict[str, Any]:
+    def generate_summary(self, pdf_path: str | Path, page_num: int = 0) -> Dict[str, Any]:
         """
         図面の要約と形状特徴を生成
 
@@ -358,9 +371,7 @@ class AIAnalysisService:
             logger.info(f"Starting summary generation: {pdf_path}")
 
             # PDFを画像に変換
-            image_data = self.pdf_converter.pdf_page_to_image(
-                pdf_path, page_num
-            )
+            image_data = self.pdf_converter.pdf_page_to_image(pdf_path, page_num)
 
             # プロンプト取得
             prompt = self.prompt_manager.format_prompt("summary_extraction")
@@ -374,7 +385,7 @@ class AIAnalysisService:
             content = response["content"]
             result = self._parse_json_response(content)
 
-            logger.info(f"Summary generation completed")
+            logger.info("Summary generation completed")
 
             return result
 
@@ -382,9 +393,7 @@ class AIAnalysisService:
             logger.error(f"Summary generation error: {str(e)}")
             raise AIAnalysisException(f"要約生成エラー: {str(e)}") from e
 
-    def analyze_drawing_full(
-        self, pdf_path: str | Path, page_num: int = 0
-    ) -> Dict[str, Any]:
+    def analyze_drawing_full(self, pdf_path: str | Path, page_num: int = 0) -> Dict[str, Any]:
         """
         図面の完全解析（全機能統合）
 
@@ -407,10 +416,17 @@ class AIAnalysisService:
         try:
             logger.info(f"Starting full drawing analysis: {pdf_path}")
 
-            # 各解析を実行
+            # まず回転検出を実行
+            rotation_result = self.detect_rotation(pdf_path, page_num)
+            detected_rotation = rotation_result.get("rotation", 0)
+            logger.info(f"Detected rotation: {detected_rotation} degrees")
+
+            # 各解析を実行（風船抽出は回転補正後の画像で実行）
             fields_result = self.analyze_drawing(pdf_path, page_num)
             classification_result = self.classify_drawing(pdf_path, page_num)
-            balloons_result = self.extract_balloons(pdf_path, page_num)
+            balloons_result = self.extract_balloons(
+                pdf_path, page_num, rotation_angle=detected_rotation
+            )
             revisions_result = self.extract_revisions(pdf_path, page_num)
             summary_result = self.generate_summary(pdf_path, page_num)
 
@@ -422,6 +438,8 @@ class AIAnalysisService:
                 "revisions": revisions_result.get("revisions", []),
                 "summary": summary_result.get("summary", ""),
                 "shape_features": summary_result.get("shape_features", {}),
+                "rotation": detected_rotation,  # 回転角度を含める
+                "rotation_confidence": rotation_result.get("confidence", 0),
             }
 
             logger.info("Full drawing analysis completed")
@@ -465,9 +483,7 @@ class AIAnalysisService:
 
         except json.JSONDecodeError as e:
             logger.error(f"JSON parse error: {str(e)}\nContent: {content}")
-            raise AIAnalysisException(
-                f"JSON解析エラー: レスポンスが正しいJSON形式ではありません"
-            ) from e
+            raise AIAnalysisException("JSON解析エラー: レスポンスが正しいJSON形式ではありません") from e
         except Exception as e:
             logger.error(f"Unexpected error parsing JSON: {str(e)}")
             raise AIAnalysisException(f"予期しないエラー: {str(e)}") from e

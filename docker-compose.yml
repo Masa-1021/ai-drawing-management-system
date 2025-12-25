@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # バックエンドAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cad-backend
+    ports:
+      - "8010:8000"
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MODEL_ID=${MODEL_ID}
+      - DATABASE_URL=sqlite:////app/storage/database.db
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Oracle Database Configuration
+      - ORACLE_HOST=${ORACLE_HOST}
+      - ORACLE_PORT=${ORACLE_PORT:-1521}
+      - ORACLE_SERVICE_NAME=${ORACLE_SERVICE_NAME}
+      - ORACLE_USER=${ORACLE_USER}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - ORACLE_STA_NO1=${ORACLE_STA_NO1}
+      - ORACLE_POOL_MIN=${ORACLE_POOL_MIN:-2}
+      - ORACLE_POOL_MAX=${ORACLE_POOL_MAX:-10}
+      - ORACLE_CONNECTION_TIMEOUT=${ORACLE_CONNECTION_TIMEOUT:-30}
+    volumes:
+      - ./storage:/app/storage
+      - ./config.json:/app/config.json:ro
+    restart: unless-stopped
+    networks:
+      - cad-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # フロントエンド（開発環境）
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: cad-frontend-dev
+    ports:
+      - "5175:5175"
+    environment:
+      - VITE_API_URL=http://localhost:8010
+      - VITE_API_PROXY_TARGET=http://backend:8000
+      - VITE_WS_PROXY_TARGET=ws://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+    networks:
+      - cad-network
+    depends_on:
+      - backend
+    profiles:
+      - dev
+
+  # フロントエンド（本番環境）
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
+    container_name: cad-frontend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    networks:
+      - cad-network
+    depends_on:
+      - backend
+    profiles:
+      - prod
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  cad-network:
+    driver: bridge
+
+volumes:
+  storage:
+    driver: local

@@ -1,771 +1,245 @@
-# タスクリスト - AI駆動型CAD図面管理システム
+# タスクリスト - 摘要表詳細ページ機能拡張
 
 ## 概要
 
-- **総タスク数**: 45タスク
-- **推定作業時間**: 2-3週間（2名体制想定）
-- **優先度**: 高
+- 総タスク数: 12タスク（3フェーズ）
+- 優先度: 高
+- 依存関係: Phase 1 → Phase 2 → Phase 3
 
-## タスク一覧
+## 機能概要
 
-### Phase 0: 環境セットアップ（推定: 2-4時間）
+1. **図面ツリータブ追加**: assembly/unit のみを階層表示
+2. **Webリンク機能**: 部品(part)タイプに外部URLを設定可能
+3. **タブ名称変更**: 「部品リスト」→「部品・図面一覧」
 
-#### Task 0.1: プロジェクト構造の作成
+---
 
-- [ ] プロジェクトルートディレクトリ作成
-- [ ] バックエンド用ディレクトリ構造作成（`backend/app/`, `backend/prompts/`, `backend/tests/`）
-- [ ] フロントエンド用ディレクトリ構造作成（`frontend/src/`）
-- [ ] ストレージディレクトリ作成（`storage/drawings/`, `storage/thumbnails/`, `storage/logs/`）
-- [ ] 設定ファイルのテンプレート作成（`config.json`, `.env.example`）
-- **完了条件**: 全ディレクトリが作成され、`.gitignore`が設定されている
+## Phase 1: バックエンド実装
+
+### Task 1.1: データベースマイグレーション ⏳ TODO
+
+- [ ] `backend/migrations/add_web_link_column.py` 作成
+- [ ] spec_sheet_items テーブルに web_link カラム追加
+- [ ] Docker コンテナ内でマイグレーション実行
+- **完了条件**: DBに web_link カラムが追加される
 - **依存**: なし
-- **推定時間**: 30分
 
-#### Task 0.2: バックエンド依存関係のセットアップ
+### Task 1.2: モデル・スキーマ更新 ⏳ TODO
 
-- [ ] `pyproject.toml` 作成（Poetry）
-- [ ] 必要なパッケージ追加（FastAPI, SQLAlchemy, boto3, PyMuPDF, Pillow, tenacity, etc.）
-- [ ] `poetry install` 実行
-- [ ] Python環境の動作確認
-- **完了条件**: `poetry install`が成功し、Pythonが起動する
-- **依存**: Task 0.1
-- **推定時間**: 30分
-
-#### Task 0.3: フロントエンド依存関係のセットアップ
-
-- [ ] `package.json` 作成（Vite + React + TypeScript）
-- [ ] 必要なパッケージ追加（React, React Router, Zustand, Tailwind, shadcn/ui, PDF.js, Axios, etc.）
-- [ ] `npm install` 実行
-- [ ] Tailwind CSS設定
-- [ ] Vite設定（プロキシ設定含む）
-- **完了条件**: `npm run dev`が成功し、ブラウザでアプリが表示される
-- **依存**: Task 0.1
-- **推定時間**: 1時間
-
-#### Task 0.4: 環境変数と設定ファイルの準備
-
-- [ ] `.env.example` 作成（AWS認証情報のテンプレート）
-- [ ] `config.json` のサンプル作成
-- [ ] README.md 作成（セットアップ手順記載）
-- **完了条件**: 環境変数が正しく読み込まれる
-- **依存**: Task 0.1
-- **推定時間**: 30分
-
----
-
-### Phase 1: バックエンド基礎実装（推定: 2-3日）
-
-#### Task 1.1: データベースモデルの実装
-
-- [ ] SQLAlchemy Base設定
-- [ ] `Drawing` モデル実装
-- [ ] `ExtractedField` モデル実装
-- [ ] `Balloon` モデル実装
-- [ ] `Revision` モデル実装
-- [ ] `Tag` モデル実装
-- [ ] `EditHistory` モデル実装
-- [ ] `Lock` モデル実装
-- [ ] リレーションシップ設定
-- [ ] インデックス設定
-- **完了条件**: 全モデルが定義され、マイグレーションが実行できる
-- **依存**: Task 0.2
-- **推定時間**: 3時間
-
-#### Task 1.2: データベース初期化スクリプト
-
-- [ ] `init_db.py` 作成
-- [ ] テーブル作成ロジック実装
-- [ ] 初期データ投入機能（オプション）
-- [ ] DBファイル生成確認
-- **完了条件**: `python init_db.py`でDBが作成される
+- [ ] `backend/app/models/spec_sheet_item.py` に web_link カラム追加
+- [ ] `backend/app/schemas/spec_sheet.py` に以下を追加:
+  - SpecSheetItemBase に web_link フィールド
+  - UpdateWebLinkRequest スキーマ
+  - UpdateWebLinkResponse スキーマ
+- **完了条件**: モデルとスキーマが正常にインポート可能
 - **依存**: Task 1.1
-- **推定時間**: 1時間
 
-#### Task 1.3: 設定管理（ConfigManager）の実装
+### Task 1.3: Webリンク更新API実装 ⏳ TODO
 
-- [ ] `ConfigManager` クラス実装
-- [ ] `config.json` 読み込み機能
-- [ ] `.env` 読み込み機能（pydantic-settings）
-- [ ] 設定値のバリデーション
-- [ ] 設定値取得メソッド実装
-- **完了条件**: 設定ファイルから値を取得できる
-- **依存**: Task 0.2
-- **推定時間**: 2時間
-
-#### Task 1.4: PromptManagerの実装
-
-- [ ] `PromptManager` クラス実装
-- [ ] `.txt`ファイル読み込み機能
-- [ ] プロンプトフォーマット機能（変数置換）
-- [ ] エラーハンドリング（ファイルが存在しない場合）
-- **完了条件**: プロンプトファイルを読み込んでフォーマットできる
-- **依存**: Task 0.2
-- **推定時間**: 1.5時間
-
-#### Task 1.5: ロギング設定の実装
-
-- [ ] ロギング設定関数実装（`setup_logging()`）
-- [ ] 操作ログ設定（RotatingFileHandler）
-- [ ] エラーログ設定
-- [ ] アクセスログ設定
-- [ ] FastAPIミドルウェアでアクセスログ記録
-- **完了条件**: ログファイルが生成され、ログが記録される
-- **依存**: Task 0.2
-- **推定時間**: 2時間
-
-#### Task 1.6: FileManagerの実装
-
-- [ ] `FileManager` クラス実装
-- [ ] PDF保存機能（UUIDでリネーム）
-- [ ] PDF削除機能
-- [ ] サムネイル生成機能（PyMuPDF + Pillow）
-- [ ] ファイルパス取得機能
-- [ ] ディスク容量チェック機能
-- **完了条件**: PDFの保存・削除・サムネイル生成ができる
-- **依存**: Task 0.2
-- **推定時間**: 3時間
+- [ ] `backend/app/api/v1/spec_sheets.py` に PATCH エンドポイント追加
+  - `PATCH /{spec_sheet_id}/items/{item_id}/web-link`
+- [ ] part_type が 'part' の場合のみ更新可能とするバリデーション
+- [ ] URL形式バリデーション (http/https)
+- [ ] APIテスト (curl/Swagger)
+- **完了条件**: エンドポイントが正常に動作
+- **依存**: Task 1.2
 
 ---
 
-### Phase 2: AI統合（推定: 3-4日）
+## Phase 2: フロントエンド型・API層
 
-#### Task 2.1: Claude API Clientの実装
+### Task 2.1: 型定義更新 ⏳ TODO
 
-- [x] AWS Bedrock Runtime boto3クライアント初期化
-- [x] `invoke_model` API呼び出し実装
-- [x] リトライロジック実装（tenacity、指数バックオフ）
-- [x] レート制限エラーハンドリング
-- [x] タイムアウト設定
-- **完了条件**: Claude APIを呼び出し、レスポンスを受け取れる
+- [ ] `frontend/src/types/spec-sheet.ts` に web_link フィールド追加
+- [ ] UpdateWebLinkRequest 型追加
+- [ ] UpdateWebLinkResponse 型追加
+- **完了条件**: TypeScript型エラーなし
 - **依存**: Task 1.3
-- **推定時間**: 3時間
 
-#### Task 2.2: PDF→画像変換機能の実装
+### Task 2.2: APIクライアント・フック追加 ⏳ TODO
 
-- [x] PyMuPDFでPDFを画像に変換
-- [x] 複数ページPDF対応（全ページを個別画像に変換）
-- [x] 解像度調整（300dpi）
-- [x] PNG形式で出力
-- [x] 画像サイズ制限チェック（5MB以下）
-- [x] 圧縮機能（必要に応じて）
-- **完了条件**: PDFを高品質な画像に変換できる
-- **依存**: Task 1.6
-- **推定時間**: 2時間
+- [ ] `frontend/src/api/spec-sheets.ts` に updateItemWebLink 関数追加
+- [ ] `frontend/src/hooks/useSpecSheets.ts` に useUpdateItemWebLink フック追加
+- **完了条件**: フックが正常に動作
+- **依存**: Task 2.1
 
-#### Task 2.3: プロンプトファイルの作成
+### Task 2.3: MUI TreeView パッケージ追加 ⏳ TODO
 
-- [x] `extraction.txt` 作成（図枠情報抽出用）
-- [x] `classification.txt` 作成（図面分類用）
-- [x] `balloon_extraction.txt` 作成（風船抽出用）
-- [x] `similarity_search.txt` 作成（類似検索用）
-- [x] `natural_language_query.txt` 作成（自然言語クエリ解析用）
-- [x] 各プロンプトにFew-shot examples追加
-- [x] A3/A4サイズ、図枠右下、風船表記の情報を反映
-- **完了条件**: 全プロンプトファイルが作成され、テスト実行できる
-- **依存**: Task 1.4
-- **推定時間**: 4時間
-
-#### Task 2.4: AIAnalysisServiceの実装（図枠抽出）
-
-- [x] `AIAnalysisService` クラス実装
-- [x] `analyze_drawing()` メソッド実装
-- [x] 図枠情報抽出ロジック
-- [x] Claude APIレスポンスのパース（JSON）
-- [x] 信頼度スコア抽出
-- [x] 座標情報抽出
-- [x] エラーハンドリング（`AIAnalysisException`）
-- **完了条件**: 図枠情報が抽出され、信頼度付きで返される
-- **依存**: Task 2.1, Task 2.3
-- **推定時間**: 4時間
-
-#### Task 2.5: AIAnalysisServiceの実装（分類）
-
-- [x] `classify_drawing()` メソッド実装
-- [x] 部品図/ユニット図/組図の分類ロジック
-- [x] 分類理由の取得
-- [x] 信頼度スコア取得
-- **完了条件**: 図面が正しく分類される
-- **依存**: Task 2.4
-- **推定時間**: 2時間
-
-#### Task 2.6: AIAnalysisServiceの実装（風船抽出）
-
-- [x] `extract_balloons()` メソッド実装
-- [x] 風船番号、部品名、数量の抽出
-- [x] 風船の座標取得
-- [x] 信頼度スコア取得
-- **完了条件**: 風船情報が抽出される
-- **依存**: Task 2.4
-- **推定時間**: 3時間
-
-#### Task 2.7: AIAnalysisServiceの実装（改訂履歴）
-
-- [x] 改訂履歴抽出ロジック実装
-- [x] 表形式・非表形式の両方に対応
-- [x] 改訂番号、日付、内容、改訂者の抽出
-- [x] 信頼度スコア取得
-- **完了条件**: 改訂履歴が抽出される
-- **依存**: Task 2.4
-- **推定時間**: 2時間
-
-#### Task 2.8: AIAnalysisServiceの実装（要約・特徴抽出）
-
-- [x] 図面要約生成機能実装
-- [x] プレート図の形状特徴抽出（サイズ、穴の数、パターン）
-- [x] 類似検索用のメタデータ生成
-- **完了条件**: 図面の要約とShape_featuresが生成される
-- **依存**: Task 2.4
-- **推定時間**: 2時間
+- [ ] `npm install @mui/x-tree-view` 実行
+- [ ] package.json に追加されることを確認
+- **完了条件**: パッケージがインストールされる
+- **依存**: なし
 
 ---
 
-### Phase 3: バックエンドサービス層（推定: 3-4日）
+## Phase 3: フロントエンドUI実装
 
-#### Task 3.1: DrawingServiceの実装（アップロード）
+### Task 3.1: タブ構成変更 ⏳ TODO
 
-- [x] `DrawingService` クラス実装
-- [x] `create_drawing()` メソッド実装
-- [x] 複数ページPDF対応（各ページを個別Drawing登録）
-- [x] PDF保存（FileManager使用）
-- [x] サムネイル生成
-- [x] AI解析のバックグラウンドタスク起動
-- [x] DB保存
-- [x] ユーザーID取得（`socket.gethostname()`）
-- **完了条件**: PDFアップロード後、解析が開始される
-- **依存**: Task 1.6, Task 2.4
-- **推定時間**: 4時間
+- [ ] SpecSheetDetailPage.tsx のタブを3タブに変更
+  - 「部品・図面一覧」(index=0)
+  - 「図面ツリー」(index=1)
+  - 「改定履歴」(index=2)
+- [ ] アイコン追加: SchemaIcon (@mui/icons-material)
+- [ ] TabPanel の index 調整
+- **完了条件**: 3つのタブが正しく表示される
+- **依存**: Task 2.3
 
-#### Task 3.2: DrawingServiceの実装（CRUD）
+### Task 3.2: DrawingTreeTab コンポーネント作成 ⏳ TODO
 
-- [x] `get_drawing()` メソッド実装
-- [x] `list_drawings()` メソッド実装（ページネーション、フィルタ）
-- [x] `update_drawing()` メソッド実装
-- [x] `delete_drawings()` メソッド実装（一括削除対応）
-- [x] 編集履歴の記録機能
-- **完了条件**: 図面のCRUD操作ができる
-- **依存**: Task 1.1
-- **推定時間**: 3時間
+- [ ] `frontend/src/components/DrawingTreeTab.tsx` 新規作成
+- [ ] assembly/unit アイテムのフィルタリング
+- [ ] ツリー構造構築ロジック（parent_item_id による親子関係）
+- [ ] SimpleTreeView + TreeItem でレンダリング
+- [ ] 展開/折りたたみボタン
+- [ ] 紐づけ状態表示（Chip）
+- [ ] 紐づけ・解除・確認ボタン
+- [ ] SpecSheetDetailPage.tsx にインポート・配置
+- **完了条件**: 図面ツリーが階層表示される
+- **依存**: Task 3.1
 
-#### Task 3.3: DrawingServiceの実装（承認機能）
+### Task 3.3: WebLinkDialog コンポーネント作成 ⏳ TODO
 
-- [x] `approve_drawing()` メソッド実装
-- [x] `unapprove_drawing()` メソッド実装
-- [x] ステータス更新（`approved`, `unapproved`）
-- [x] 承認日時記録
-- [x] 操作ログ記録
-- **完了条件**: 図面の承認・承認取り消しができる
-- **依存**: Task 3.2
-- **推定時間**: 2時間
+- [ ] `frontend/src/components/WebLinkDialog.tsx` 新規作成
+- [ ] URL入力フィールド
+- [ ] バリデーション（http/https）
+- [ ] 保存・削除・キャンセルボタン
+- [ ] useUpdateItemWebLink フックの使用
+- [ ] toast通知
+- **完了条件**: Webリンクの設定・編集・削除が可能
+- **依存**: Task 2.2
 
-#### Task 3.4: DrawingServiceの実装（一括操作）
+### Task 3.4: 部品・図面一覧タブの列変更 ⏳ TODO
 
-- [x] `bulk_update_tags()` メソッド実装
-- [x] `bulk_update_category()` メソッド実装
-- [x] `bulk_download()` メソッド実装（ZIP生成）
-- [x] トランザクション処理
-- **完了条件**: 一括操作ができる
-- **依存**: Task 3.2
-- **推定時間**: 3時間
+- [ ] SpecSheetDetailPage.tsx の columns を変更
+- [ ] 「図面」列の名前を「図面/リンク」に変更
+- [ ] renderCell ロジック変更:
+  - assembly/unit: 図面紐づけボタン（現状維持）
+  - part: Webリンクボタン（OpenInNewIcon, AddLinkIcon）
+  - purchased: 非表示
+- [ ] WebLinkDialog の状態管理追加
+- [ ] アイコンインポート追加: OpenInNewIcon, AddLinkIcon
+- **完了条件**: 種別に応じた適切なボタンが表示される
+- **依存**: Task 3.3
 
-#### Task 3.5: LockManagerの実装
+### Task 3.5: 統合・動作確認 ⏳ TODO
 
-- [x] `LockManager` クラス実装
-- [x] `acquire_lock()` メソッド実装
-- [x] `release_lock()` メソッド実装
-- [x] `check_lock()` メソッド実装
-- [x] `cleanup_expired_locks()` メソッド実装（バックグラウンドタスク）
-- [x] タイムアウト設定（5分）
-- [x] WebSocket通知連携
-- **完了条件**: 編集ロックが正常に動作する
-- **依存**: Task 1.1
-- **推定時間**: 4時間
-
-#### Task 3.6: SearchServiceの実装（自然言語検索）
-
-- [x] `SearchService` クラス実装
-- [x] `natural_language_search()` メソッド実装
-- [x] Claude APIでクエリ解析
-- [x] 構造化クエリに変換
-- [x] SQLクエリ生成・実行
-- [x] AND/OR条件対応
-- **完了条件**: 自然言語で検索できる
-- **依存**: Task 2.4
-- **推定時間**: 4時間
-
-#### Task 3.7: SearchServiceの実装（類似検索）
-
-- [x] `similarity_search()` メソッド実装
-- [x] Claude APIで画像比較
-- [x] 類似度スコア算出
-- [x] 類似度順にソート
-- [x] プレート図の形状特徴を活用
-- **完了条件**: 類似図面を検索できる
-- **依存**: Task 2.8
-- **推定時間**: 4時間
-
----
-
-### Phase 4: バックエンドAPI層（推定: 2-3日）
-
-#### Task 4.1: FastAPIアプリケーション初期設定
-
-- [x] `main.py` 作成
-- [x] FastAPIインスタンス作成
-- [x] CORS設定
-- [x] ミドルウェア設定（ロギング）
-- [x] エラーハンドラー設定（`AIAnalysisException`, `LockException`）
-- [x] 起動確認
-- **完了条件**: FastAPIが起動し、`/docs`でSwagger UIが表示される
-- **依存**: Task 0.2
-- **推定時間**: 1.5時間
-
-#### Task 4.2: 図面管理APIの実装
-
-- [x] `POST /api/drawings/upload` 実装
-- [x] `GET /api/drawings` 実装（ページネーション、フィルタ）
-- [x] `GET /api/drawings/{drawing_id}` 実装
-- [x] `PUT /api/drawings/{drawing_id}` 実装
-- [ ] `PUT /api/drawings/{drawing_id}/approve` 実装
-- [ ] `PUT /api/drawings/{drawing_id}/unapprove` 実装
-- [ ] `DELETE /api/drawings` 実装（一括削除）
-- [ ] `POST /api/drawings/{drawing_id}/reanalyze` 実装
-- [ ] バリデーション（Pydantic）
-- **完了条件**: 全エンドポイントが正常に動作する
-- **依存**: Task 3.1, Task 3.2, Task 3.3
-- **推定時間**: 4時間
-
-#### Task 4.3: 一括操作APIの実装
-
-- [ ] `POST /api/drawings/bulk/tags` 実装
-- [ ] `POST /api/drawings/bulk/category` 実装
-- [ ] `POST /api/drawings/download/bulk` 実装（ZIP生成）
-- [ ] `GET /api/drawings/{drawing_id}/download` 実装
-- **完了条件**: 一括操作APIが動作する
+- [ ] npm run typecheck 実行・エラー修正
+- [ ] npm run lint 実行・エラー修正
+- [ ] Docker環境で統合テスト
+  - 図面ツリータブの表示確認
+  - 紐づけ済み図面の「確認」ボタン動作
+  - 未紐づけ図面の「紐づけ」ボタン動作
+  - 部品のWebリンク設定・編集・削除
+  - 購入品に何も表示されないこと
+- **完了条件**: 全機能が正常に動作
 - **依存**: Task 3.4
-- **推定時間**: 2時間
-
-#### Task 4.4: 検索APIの実装
-
-- [ ] `POST /api/search/natural` 実装
-- [ ] `POST /api/search/similar` 実装
-- [ ] レスポンス形式の統一
-- **完了条件**: 検索APIが動作する
-- **依存**: Task 3.6, Task 3.7
-- **推定時間**: 2時間
-
-#### Task 4.5: ロック管理APIの実装
-
-- [ ] `POST /api/locks/acquire` 実装
-- [ ] `DELETE /api/locks/release` 実装
-- [ ] `GET /api/locks/{drawing_id}` 実装
-- **完了条件**: ロックAPIが動作する
-- **依存**: Task 3.5
-- **推定時間**: 1.5時間
-
-#### Task 4.6: 設定APIの実装
-
-- [ ] `GET /api/config/extraction-fields` 実装
-- [ ] config.jsonから設定値を返す
-- **完了条件**: 設定APIが動作する
-- **依存**: Task 1.3
-- **推定時間**: 30分
-
-#### Task 4.7: WebSocket実装
-
-- [ ] WebSocketエンドポイント実装
-- [ ] `subscribe_drawing` イベント実装
-- [ ] `unsubscribe_drawing` イベント実装
-- [ ] `drawing_locked` イベント実装
-- [ ] `drawing_unlocked` イベント実装
-- [ ] LockManagerとの連携
-- **完了条件**: WebSocketでリアルタイム通知ができる
-- **依存**: Task 3.5
-- **推定時間**: 3時間
-
----
-
-### Phase 5: フロントエンド基礎実装（推定: 3-4日）
-
-#### Task 5.1: ルーティング設定
-
-- [ ] React Router設定
-- [ ] ルート定義（`/upload`, `/search`, `/similar-search`, `/list`, `/edit/:id`）
-- [ ] 404ページ実装
-- **完了条件**: ページ遷移ができる
-- **依存**: Task 0.3
-- **推定時間**: 1時間
-
-#### Task 5.2: API Clientの実装
-
-- [ ] Axiosインスタンス作成
-- [ ] エラーハンドリング設定（インターセプター）
-- [ ] 型定義（TypeScript interface）
-- [ ] API関数実装（`uploadDrawing`, `getDrawings`, `updateDrawing`, etc.）
-- **完了条件**: バックエンドAPIを呼び出せる
-- **依存**: Task 4.1
-- **推定時間**: 2時間
-
-#### Task 5.3: 状態管理（Zustand）の実装
-
-- [ ] `drawingStore` 実装
-- [ ] `searchStore` 実装
-- [ ] `uiStore` 実装（ローディング、トースト通知）
-- [ ] WebSocket統合
-- **完了条件**: グローバル状態が管理できる
-- **依存**: Task 5.2
-- **推定時間**: 2時間
-
-#### Task 5.4: 共通UIコンポーネントの実装
-
-- [ ] Layoutコンポーネント（ヘッダー、ナビゲーション）
-- [ ] Toastコンポーネント（react-hot-toast）
-- [ ] Modalコンポーネント（shadcn/ui Dialog）
-- [ ] Loaderコンポーネント
-- [ ] Buttonコンポーネント（青アクセント）
-- [ ] shadcn/ui のカスタマイズ（白/青テーマ）
-- **完了条件**: 共通コンポーネントが再利用できる
-- **依存**: Task 0.3
-- **推定時間**: 3時間
-
----
-
-### Phase 6: フロントエンドメイン機能（推定: 4-5日）
-
-#### Task 6.1: アップロード画面の実装
-
-- [ ] UploadViewコンポーネント実装
-- [ ] ドラッグ&ドロップエリア実装
-- [ ] ファイル選択ボタン
-- [ ] アップロード進捗表示
-- [ ] 最近アップロードした図面表示（カード形式）
-- [ ] バリデーション（PDFのみ、50MB以下）
-- **完了条件**: PDFをアップロードできる
-- **依存**: Task 5.2, Task 5.4
-- **推定時間**: 4時間
-
-#### Task 6.2: PDFViewerコンポーネントの実装
-
-- [ ] PDF.js統合
-- [ ] PDF表示機能
-- [ ] ズーム機能（+/-ボタン）
-- [ ] 回転機能
-- [ ] ページめくり機能
-- [ ] Fit to width デフォルト設定
-- [ ] PDF.js Worker設定
-- **完了条件**: PDFが表示され、操作できる
-- **依存**: Task 0.3
-- **推定時間**: 4時間
-
-#### Task 6.3: PDFViewerのハイライト機能実装
-
-- [ ] Canvas レイヤー実装
-- [ ] ハイライト描画機能
-- [ ] 座標からハイライト表示
-- [ ] ハイライトクリック時のズーム機能
-- [ ] 枠線・色の設定
-- **完了条件**: フィールドクリック時に該当箇所がハイライトされる
-- **依存**: Task 6.2
-- **推定時間**: 3時間
-
-#### Task 6.4: EditFormコンポーネントの実装
-
-- [ ] EditFormコンポーネント実装
-- [ ] 基本情報セクション（図番、タイトル、作成日など）
-- [ ] 各フィールドに信頼度％表示
-- [ ] 70%未満のフィールドにインライン警告
-- [ ] React Hook Form統合
-- [ ] バリデーション（Zod）
-- **完了条件**: 解析結果を編集できる
-- **依存**: Task 5.4
-- **推定時間**: 4時間
-
-#### Task 6.5: EditFormのタグ・分類セクション実装
-
-- [ ] タグ入力コンポーネント実装（追加・削除）
-- [ ] 分類ドロップダウン実装
-- [ ] タグのオートコンプリート（オプション）
-- **完了条件**: タグと分類を編集できる
-- **依存**: Task 6.4
-- **推定時間**: 2時間
-
-#### Task 6.6: EditFormの改訂履歴・風船情報セクション実装
-
-- [ ] 改訂履歴テーブル実装
-- [ ] 風船情報テーブル実装
-- [ ] 風船クリック時のハイライト連携
-- [ ] 改訂履歴・風船情報の編集機能
-- **完了条件**: 改訂履歴と風船情報を表示・編集できる
-- **依存**: Task 6.4
-- **推定時間**: 3時間
-
-#### Task 6.7: EditFormの編集履歴セクション実装
-
-- [ ] 編集履歴パネル実装（展開/折りたたみ）
-- [ ] 編集履歴の表示（誰が・いつ・何を）
-- [ ] 変更前後の値表示
-- **完了条件**: 編集履歴が表示される
-- **依存**: Task 6.4
-- **推定時間**: 2時間
-
-#### Task 6.8: 図面編集画面（DrawingEditorView）の実装
-
-- [ ] DrawingEditorViewコンポーネント実装
-- [ ] 2分割レイアウト（左30%、右70%）
-- [ ] レスポンシブ対応（モバイル/タブレットで縦並び）
-- [ ] EditFormとPDFViewerの統合
-- [ ] フィールドクリック時のハイライト連携
-- [ ] 複数図面の順次処理（進捗表示、前へ/次へボタン）
-- [ ] 承認・保存ボタン
-- [ ] 編集ロック状態の表示
-- **完了条件**: 図面編集画面が完全に機能する
-- **依存**: Task 6.2, Task 6.3, Task 6.4, Task 6.6, Task 6.7
-- **推定時間**: 5時間
-
-#### Task 6.9: 一覧画面（ListView）の実装
-
-- [ ] ListViewコンポーネント実装
-- [ ] カード表示実装（デフォルト）
-- [ ] テーブル表示実装
-- [ ] 表示切り替えボタン
-- [ ] ソート機能（新しい順がデフォルト）
-- [ ] フィルタ機能
-- [ ] ページネーション
-- [ ] 複数選択（チェックボックス）
-- [ ] 一括操作ボタン（タグ付け、削除、ダウンロード）
-- [ ] react-windowで仮想化（オプション）
-- **完了条件**: 図面一覧が表示され、操作できる
-- **依存**: Task 5.2, Task 5.4
-- **推定時間**: 5時間
-
-#### Task 6.10: 検索画面（SearchView）の実装
-
-- [ ] SearchViewコンポーネント実装
-- [ ] タブ切り替え（自然言語検索/類似検索）
-- [ ] 自然言語検索フォーム
-- [ ] 検索例の表示
-- [ ] 結果表示（テーブル/カード切り替え）
-- [ ] チェックボックスで複数選択
-- [ ] ダウンロードボタン
-- **完了条件**: 自然言語検索ができる
-- **依存**: Task 5.2, Task 6.9
-- **推定時間**: 4時間
-
-#### Task 6.11: 類似検索機能の実装
-
-- [ ] 類似検索タブの実装
-- [ ] 「類似図面を検索」ボタン（図面編集画面）
-- [ ] 類似度スコア表示
-- [ ] 検索元図面と並べて表示
-- **完了条件**: 類似図面を検索できる
-- **依存**: Task 6.10
-- **推定時間**: 3時間
-
----
-
-### Phase 7: 編集ロック・WebSocket連携（推定: 1-2日）
-
-#### Task 7.1: WebSocketクライアントの実装
-
-- [x] Socket.IO Clientセットアップ
-- [x] `subscribe_drawing` イベント送信
-- [x] `drawing_locked` イベント受信
-- [x] `drawing_unlocked` イベント受信
-- [x] WebSocketクライアント実装（websocket.ts）
-- **完了条件**: WebSocketでリアルタイム通知が受信できる
-- **依存**: Task 5.3
-- **推定時間**: 2時間
-
-#### Task 7.2: 編集ロック機能の統合
-
-- [x] 図面編集画面でロック取得
-- [x] 他のユーザーがロック中の場合、読み取り専用表示
-- [x] ロック中の通知（トースト）
-- [x] 画面を閉じた時にロック解放
-- [x] LockManager統合テスト完了
-- **完了条件**: 編集ロックが正常に機能する
-- **依存**: Task 7.1, Task 6.8
-- **推定時間**: 3時間
-
----
-
-### Phase 8: テスト・デバッグ（推定: 2-3日）
-
-#### Task 8.1: バックエンド単体テストの作成
-
-- [x] AIAnalysisServiceのテスト (初期化)
-- [x] DrawingServiceのテスト (test_drawing_service.py)
-- [x] LockManagerのテスト (test_websocket_lock.py)
-- [x] SearchServiceのテスト (test_integration.py)
-- [x] 基本機能テスト実行確認 (test_basic.py)
-- **完了条件**: カバレッジ70%以上
-- **依存**: Phase 3
-- **推定時間**: 4時間
-
-#### Task 8.2: フロントエンド単体テストの作成
-
-- [x] WebSocketクライアントのテスト (統合テスト内)
-- [x] Lock APIクライアントのテスト (E2Eテスト内)
-- [x] EditPageのテスト (統合テスト内)
-- **完了条件**: 主要コンポーネントがテストされている
-- **依存**: Phase 6
-- **推定時間**: 3時間
-
-#### Task 8.3: 統合テストの実施
-
-- [x] 図面API統合テスト (test_integration.py)
-- [x] 編集ロックのテスト (test_websocket_lock.py)
-- [x] E2Eフローテスト (test_e2e_flow.py)
-- [x] エラーハンドリングのテスト
-- [x] TEST_SUMMARY.md作成
-- **完了条件**: 全フローが正常に動作する
-- **依存**: Phase 7
-- **推定時間**: 4時間
-
-#### Task 8.4: E2Eテストの実施（オプション）
-
-- [ ] Playwrightセットアップ
-- [ ] アップロード→編集→承認のE2Eテスト
-- [ ] 検索機能のE2Eテスト
-- **完了条件**: E2Eテストが通る
-- **依存**: Task 8.3
-- **推定時間**: 3時間
-
----
-
-### Phase 9: 最終調整・ドキュメント（推定: 1-2日）
-
-#### Task 9.1: エラーメッセージの日本語化
-
-- [ ] 全エラーメッセージを日本語に統一
-- [ ] ユーザーフレンドリーなメッセージに修正
-- [ ] 信頼度警告メッセージの調整
-- **完了条件**: エラーメッセージが分かりやすい
-- **依存**: Phase 8
-- **推定時間**: 2時間
-
-#### Task 9.2: UI/UXの最終調整
-
-- [ ] 青/白テーマの微調整
-- [ ] ボタン配置の最適化
-- [ ] レスポンシブデザインの確認
-- [ ] アクセシビリティ確認
-- **完了条件**: UIが洗練されている
-- **依存**: Phase 6
-- **推定時間**: 3時間
-
-#### Task 9.3: パフォーマンス最適化
-
-- [ ] 画像読み込みの最適化
-- [ ] バックグラウンドタスクの最適化
-- [ ] DBクエリの最適化（N+1問題）
-- [ ] フロントエンドコード分割
-- **完了条件**: パフォーマンスが十分
-- **依存**: Phase 8
-- **推定時間**: 3時間
-
-#### Task 9.4: README・ドキュメントの作成
-
-- [ ] README.md 完成（セットアップ手順、使用方法）
-- [ ] AWS Bedrock設定ガイド
-- [ ] config.jsonの設定例
-- [ ] トラブルシューティング
-- [ ] API ドキュメント（OpenAPI）
-- **完了条件**: ドキュメントが完備されている
-- **依存**: すべて
-- **推定時間**: 3時間
-
-#### Task 9.5: 受け入れテスト
-
-- [ ] テストケース1-10を実施（requirements.mdの成功基準）
-- [ ] バグ修正
-- [ ] 最終動作確認
-- **完了条件**: 全受け入れテストが通る
-- **依存**: Task 9.1, Task 9.2, Task 9.3
-- **推定時間**: 4時間
 
 ---
 
 ## 実装順序
 
-### 推奨実装順序
-
-1. **Phase 0** → **Phase 1** → **Phase 2** → **Phase 3** → **Phase 4**（バックエンド完成）
-2. **Phase 5** → **Phase 6**（フロントエンド基礎）
-3. **Phase 7**（WebSocket連携）
-4. **Phase 8**（テスト）
-5. **Phase 9**（最終調整）
-
-### 並行実行可能なタスク
-
-- **Phase 2**（AI統合）と **Phase 5**（フロントエンド基礎）は並行実行可能
-- **Task 6.2-6.7**（フロントエンドコンポーネント）は一部並行実行可能
-
-### クリティカルパス
-
 ```
-Task 0.1 → Task 0.2 → Task 1.1 → Task 1.3 → Task 2.1 → Task 2.3 → Task 2.4
-→ Task 3.1 → Task 4.1 → Task 4.2 → Task 5.2 → Task 6.8 → Task 7.2 → Task 8.3
+Phase 1 (バックエンド):
+┌─────────────────┐
+│ Task 1.1        │
+│ DBマイグレーション │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Task 1.2        │
+│ モデル・スキーマ  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Task 1.3        │
+│ API実装         │
+└────────┬────────┘
+         │
+         ▼
+Phase 2 (フロントエンド型・API):
+┌─────────────────┐     ┌─────────────────┐
+│ Task 2.1        │     │ Task 2.3        │
+│ 型定義          │     │ TreeViewパッケージ│
+└────────┬────────┘     └─────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Task 2.2        │
+│ APIクライアント  │
+└────────┬────────┘
+         │
+         ▼
+Phase 3 (フロントエンドUI):
+┌─────────────────┐
+│ Task 3.1        │
+│ タブ構成変更     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│ Task 3.2        │     │ Task 3.3        │
+│ DrawingTreeTab  │     │ WebLinkDialog   │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+         └───────────┬───────────┘
+                     ▼
+┌─────────────────┐
+│ Task 3.4        │
+│ 列変更          │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Task 3.5        │
+│ 統合テスト      │
+└─────────────────┘
 ```
 
 ---
 
-## リスクと対策
+## ファイル一覧
 
-| リスク | 対策 |
-|--------|------|
-| **Claude API解析精度が低い** | プロンプトの段階的改善、Few-shot examples追加、信頼度70%未満フィールドの手動編集 |
-| **複数ページPDF処理が遅い** | バックグラウンドタスクで非同期処理、進捗表示 |
-| **編集ロックの競合が複雑** | シンプルな先着ロック方式、WebSocketでリアルタイム通知 |
-| **PDF.jsのハイライトが困難** | Canvas APIを使用、座標情報を正確に取得 |
-| **開発期間が予定を超過** | MVPに集中、オプション機能は後回し |
+### 新規作成
+| ファイル | 説明 |
+|---------|------|
+| backend/migrations/add_web_link_column.py | DBマイグレーション |
+| frontend/src/components/DrawingTreeTab.tsx | 図面ツリータブ |
+| frontend/src/components/WebLinkDialog.tsx | Webリンク編集ダイアログ |
 
----
-
-## 注意事項
-
-### 実装時の注意点
-
-1. **コミット単位**: 各タスクを1-2コミットで完結させる
-2. **テスト駆動**: 重要な機能（AI解析、ロック機能）は先にテストを書く
-3. **ログ記録**: 操作ログ・エラーログを適切に記録する
-4. **型安全性**: TypeScript/Pythonの型チェックを活用
-5. **エラーハンドリング**: ユーザーフレンドリーなエラーメッセージ
-
-### レビューポイント
-
-- [ ] 信頼度70%未満のフィールドに警告が表示されるか
-- [ ] 複数ページPDFが個別図面として登録されるか
-- [ ] 編集ロックが正常に機能するか
-- [ ] プロンプトが`.txt`ファイルで管理されているか
-- [ ] ログが正しく記録されているか
+### 変更
+| ファイル | 変更内容 |
+|---------|----------|
+| backend/app/models/spec_sheet_item.py | web_link カラム追加 |
+| backend/app/schemas/spec_sheet.py | web_link フィールド、新規スキーマ追加 |
+| backend/app/api/v1/spec_sheets.py | PATCH エンドポイント追加 |
+| frontend/src/types/spec-sheet.ts | web_link 型追加 |
+| frontend/src/api/spec-sheets.ts | updateItemWebLink 関数追加 |
+| frontend/src/hooks/useSpecSheets.ts | useUpdateItemWebLink フック追加 |
+| frontend/src/pages/SpecSheetDetailPage.tsx | タブ構成変更、列変更、ダイアログ統合 |
+| frontend/package.json | @mui/x-tree-view 追加 |
 
 ---
 
-## 実装開始ガイド
+## チェックリスト
 
-### 開始手順
+### 受け入れ基準
 
-1. **Phase 0のタスクから順次実行**してください
-2. 各タスクの開始時に**TodoWriteツール**で`in_progress`に更新
-3. 完了時は`completed`に更新
-4. 問題発生時は速やかに報告してください
-
-### 初日の推奨タスク
-
-1. Task 0.1: プロジェクト構造の作成
-2. Task 0.2: バックエンド依存関係のセットアップ
-3. Task 0.3: フロントエンド依存関係のセットアップ
-4. Task 0.4: 環境変数と設定ファイルの準備
-5. Task 1.1: データベースモデルの実装
-
-### 実装時のコツ
-
-- **AI解析**: プロンプトは段階的に改善。最初は簡単な例でテスト。
-- **UI実装**: モックデータで先に画面を作り、後からAPI連携
-- **デバッグ**: ログを活用。特にClaude APIのレスポンスを記録
+- [ ] 摘要表詳細ページで3タブが表示される
+- [ ] 「部品・図面一覧」タブで全アイテムが表示される
+- [ ] 「図面ツリー」タブでassembly/unitのみが階層表示される
+- [ ] ツリーの展開/折りたたみが動作する
+- [ ] 図面紐づけ済みアイテムから編集ページに遷移できる
+- [ ] 未紐づけアイテムから図面選択ダイアログを開ける
+- [ ] 部品(part)タイプにWebリンクを設定できる
+- [ ] 設定済みWebリンクをクリックで外部サイトが開く
+- [ ] Webリンクの編集・削除ができる
+- [ ] 購入品(purchased)タイプには何も表示されない
 
 ---
 
-**作成日**: 2025-11-14
+**作成日**: 2025-12-15
 **作成者**: Claude Code
 **バージョン**: 1.0

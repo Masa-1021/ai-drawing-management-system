@@ -31,8 +31,9 @@ class FileManager:
         if storage_path:
             self.storage_path = Path(storage_path)
         else:
-            # プロジェクトルート/storage
-            project_root = Path(__file__).parent.parent.parent.parent
+            # /app/app/utils/file_manager.py から /app/storage への相対パス
+            # parent.parent.parent = /app
+            project_root = Path(__file__).parent.parent.parent
             self.storage_path = project_root / "storage"
 
         self.drawings_path = self.storage_path / "drawings"
@@ -59,39 +60,90 @@ class FileManager:
         doc.close()
         return rotation
 
-    def rotate_pdf(self, pdf_path: str, rotation_angle: int) -> None:
+    def flatten_pdf(self, pdf_path: str) -> None:
         """
-        PDFの全ページを指定角度だけ回転して保存
+        PDFのメタデータ回転を視覚的に適用してフラット化する
+
+        メタデータの回転（page.rotation）を実際のコンテンツに適用し、
+        回転メタデータを0にリセットする。これにより、
+        表示される内容と物理的なページサイズが一致する。
 
         Args:
             pdf_path: PDFファイルのパス
-            rotation_angle: 回転角度（90, 180, 270, -90など）
         """
         import tempfile
         import os
         import shutil
 
-        # 一時ファイルを作成
-        temp_fd, temp_path = tempfile.mkstemp(suffix='.pdf')
-        os.close(temp_fd)  # 即座に閉じる
-
-        doc = None
+        src_doc = None
         try:
-            # 元のPDFを開く
-            doc = fitz.open(pdf_path)
+            src_doc = fitz.open(pdf_path)
+            first_page = src_doc[0]
+            metadata_rotation = first_page.rotation
 
-            # 全ページを回転
-            for page in doc:
-                # 現在の回転角度を取得
-                current_rotation = page.rotation
-                # 新しい回転角度を計算（累積ではなく絶対値）
-                new_rotation = (current_rotation + rotation_angle) % 360
-                page.set_rotation(new_rotation)
+            if metadata_rotation == 0:
+                logger.info("PDF already flattened (rotation=0), skipping")
+                src_doc.close()
+                return
+
+            src_doc.close()
+            src_doc = None
+
+            logger.info(f"Flattening PDF with metadata rotation {metadata_rotation}")
+
+        except Exception as e:
+            if src_doc is not None:
+                src_doc.close()
+            logger.error(f"Failed to check PDF rotation: {e}")
+            raise e
+
+        # フラット化処理（rotate=0でshow_pdf_page）
+        temp_fd, temp_path = tempfile.mkstemp(suffix=".pdf")
+        os.close(temp_fd)
+
+        src_doc = None
+        dst_doc = None
+        try:
+            src_doc = fitz.open(pdf_path)
+            dst_doc = fitz.open()
+
+            for page_num in range(src_doc.page_count):
+                src_page = src_doc[page_num]
+                src_rotation = src_page.rotation
+
+                # page.rectは物理的なサイズ（回転なし）
+                # 90度/270度回転の場合、表示サイズは幅と高さが入れ替わる
+                physical_rect = src_page.rect
+                if src_rotation in [90, 270]:
+                    new_width = physical_rect.height
+                    new_height = physical_rect.width
+                else:
+                    new_width = physical_rect.width
+                    new_height = physical_rect.height
+
+                # 新しいページを作成（回転後の表示サイズで）
+                dst_page = dst_doc.new_page(width=new_width, height=new_height)
+
+                # show_pdf_pageでコンテンツを描画
+                # rotate=src_rotationを指定して、元のPDFの回転を適用してコンテンツを埋め込む
+                dst_page.show_pdf_page(
+                    dst_page.rect,
+                    src_doc,
+                    page_num,
+                    rotate=src_rotation,
+                )
+
+                logger.debug(
+                    f"Page {page_num + 1}: flattened from rotation {src_rotation}, "
+                    f"size {new_width}x{new_height}"
+                )
 
             # 一時ファイルに保存
-            doc.save(temp_path, garbage=4, deflate=True, clean=True)
-            doc.close()
-            doc = None
+            dst_doc.ez_save(temp_path)
+            dst_doc.close()
+            dst_doc = None
+            src_doc.close()
+            src_doc = None
 
             # Windowsでの問題を避けるため、少し待つ
             import time
@@ -102,25 +154,146 @@ class FileManager:
                 os.remove(pdf_path)
             shutil.move(temp_path, pdf_path)
 
+            logger.info(f"PDF flattened: {pdf_path}")
+
+        except Exception as e:
+            if dst_doc is not None:
+                try:
+                    dst_doc.close()
+                except Exception:
+                    pass
+            if src_doc is not None:
+                try:
+                    src_doc.close()
+                except Exception:
+                    pass
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception:
+                pass
+            logger.error(f"PDF flattening failed: {e}")
+            raise e
+
+    def rotate_pdf_content(self, pdf_path: str, rotation_angle: int) -> None:
+        """
+        PDFの全ページのコンテンツ自体を指定角度だけ回転して保存
+
+        まずPDFをフラット化（メタデータ回転を適用）してから、
+        指定された回転角度を追加で適用する。
+
+        Args:
+            pdf_path: PDFファイルのパス
+            rotation_angle: 回転角度（90, 180, 270）時計回り
+        """
+        import tempfile
+        import os
+        import shutil
+
+        # 回転角度を正規化（0, 90, 180, 270）
+        rotation_angle = rotation_angle % 360
+
+        # まずPDFをフラット化（メタデータ回転を適用）
+        self.flatten_pdf(pdf_path)
+
+        if rotation_angle == 0:
+            logger.info("Rotation angle is 0, only flattening was applied")
+            return
+
+        # 一時ファイルを作成
+        temp_fd, temp_path = tempfile.mkstemp(suffix=".pdf")
+        os.close(temp_fd)
+
+        src_doc = None
+        dst_doc = None
+        try:
+            # フラット化されたPDFを開く
+            src_doc = fitz.open(pdf_path)
+            # 新しいPDFを作成
+            dst_doc = fitz.open()
+
+            for page_num in range(src_doc.page_count):
+                src_page = src_doc[page_num]
+
+                # フラット化後はrectがそのまま物理サイズ
+                src_rect = src_page.rect
+                w, h = src_rect.width, src_rect.height
+
+                # 90度または270度回転の場合、幅と高さを入れ替える
+                if rotation_angle in [90, 270]:
+                    new_width, new_height = h, w
+                else:
+                    new_width, new_height = w, h
+
+                # 新しいページを作成
+                dst_page = dst_doc.new_page(width=new_width, height=new_height)
+
+                # show_pdf_page()で回転を適用してコンテンツを埋め込む
+                dst_page.show_pdf_page(
+                    dst_page.rect,
+                    src_doc,
+                    page_num,
+                    rotate=rotation_angle,
+                )
+
+                logger.debug(
+                    f"Page {page_num + 1}: rotated {rotation_angle} degrees, "
+                    f"size {w}x{h} -> {new_width}x{new_height}"
+                )
+
+            # 一時ファイルに保存
+            dst_doc.ez_save(temp_path)
+            dst_doc.close()
+            dst_doc = None
+            src_doc.close()
+            src_doc = None
+
+            # Windowsでの問題を避けるため、少し待つ
+            import time
+            time.sleep(0.1)
+
+            # 元のファイルを削除してから一時ファイルを移動
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+            shutil.move(temp_path, pdf_path)
+
+            logger.info(f"PDF content rotated {rotation_angle} degrees: {pdf_path}")
+
         except Exception as e:
             # ドキュメントが開いていたら閉じる
-            if doc is not None:
+            if dst_doc is not None:
                 try:
-                    doc.close()
-                except:
+                    dst_doc.close()
+                except Exception:
+                    pass
+            if src_doc is not None:
+                try:
+                    src_doc.close()
+                except Exception:
                     pass
 
             # 一時ファイルを削除
             try:
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
-            except:
+            except Exception:
                 pass
+            logger.error(f"PDF rotation failed: {e}")
             raise e
 
-    def auto_correct_rotation(
-        self, pdf_path: str, ai_service: Optional[Any] = None
-    ) -> int:
+    def rotate_pdf(self, pdf_path: str, rotation_angle: int) -> None:
+        """
+        PDFの全ページを指定角度だけ回転して保存（コンテンツ回転版）
+
+        後方互換性のためのエイリアス。rotate_pdf_content()を呼び出す。
+
+        Args:
+            pdf_path: PDFファイルのパス
+            rotation_angle: 回転角度（90, 180, 270）時計回り
+        """
+        self.rotate_pdf_content(pdf_path, rotation_angle)
+
+    def auto_correct_rotation(self, pdf_path: str, ai_service: Optional[Any] = None) -> int:
         """
         PDFの回転を自動検出して0度に修正
 
@@ -137,18 +310,19 @@ class FileManager:
         """
         # 1. PDFメタデータから回転角度を取得
         metadata_rotation = self.detect_rotation(pdf_path, 0)
-        
+
         # 2. AIによる画像内容解析（ai_serviceが提供された場合）
         ai_rotation = None
         ai_confidence = 0
-        
+
         if ai_service:
             try:
                 from pathlib import Path
+
                 ai_result = ai_service.detect_rotation(Path(pdf_path), 0)
                 ai_rotation = ai_result.get("rotation", 0)
                 ai_confidence = ai_result.get("confidence", 0)
-                
+
                 logger.info(
                     f"AI rotation detection: {ai_rotation} degrees "
                     f"(confidence: {ai_confidence}%)"
@@ -181,9 +355,7 @@ class FileManager:
             # 0度に戻すための角度を計算（反対方向に回転）
             correction_angle = -final_rotation
             self.rotate_pdf(pdf_path, correction_angle)
-            logger.info(
-                f"PDF rotation corrected: {final_rotation} degrees → 0 degrees"
-            )
+            logger.info(f"PDF rotation corrected: {final_rotation} degrees → 0 degrees")
             return final_rotation
 
         return 0
@@ -209,8 +381,8 @@ class FileManager:
         """
         # UUIDでファイル名を生成
         file_id = str(uuid.uuid4())
-        file_extension = Path(original_filename).suffix
-        new_filename = f"{file_id}{file_extension}"
+        # 拡張子は常に.pdfとする（TIFから変換された場合も対応）
+        new_filename = f"{file_id}.pdf"
 
         # 保存先パス
         save_path = self.drawings_path / new_filename
@@ -221,13 +393,9 @@ class FileManager:
 
         # 自動回転修正
         if auto_rotate:
-            original_rotation = self.auto_correct_rotation(
-                str(save_path), ai_service=ai_service
-            )
+            original_rotation = self.auto_correct_rotation(str(save_path), ai_service=ai_service)
             if original_rotation != 0:
-                logger.info(
-                    f"PDF回転を検出: {original_rotation}度 → 0度に修正しました"
-                )
+                logger.info(f"PDF回転を検出: {original_rotation}度 → 0度に修正しました")
 
         return new_filename, str(save_path)
 
@@ -249,7 +417,11 @@ class FileManager:
         return False
 
     def generate_thumbnail(
-        self, pdf_path: str, page_num: int = 0, max_size: Tuple[int, int] = (200, 300)
+        self,
+        pdf_path: str,
+        page_num: int = 0,
+        max_size: Tuple[int, int] = (200, 300),
+        rotation: int = 0,
     ) -> str:
         """
         PDFのサムネイルを生成
@@ -258,6 +430,7 @@ class FileManager:
             pdf_path: PDFファイルのパス
             page_num: ページ番号（0始まり）
             max_size: サムネイルの最大サイズ (width, height)
+            rotation: AIで検出された回転角度 (0, 90, 180, 270)
 
         Returns:
             サムネイルファイルのパス
@@ -275,26 +448,32 @@ class FileManager:
         doc = fitz.open(pdf_path)
         page = doc[page_num]  # 指定されたページ
 
-        # ページの回転情報を取得
-        # 注意: page.set_rotation()は表示時の回転のみを変更するため、
-        # 実際のコンテンツは回転していない可能性がある
-        # そのため、回転情報を考慮してMatrixに回転を含める
-        page_rotation = page.rotation
-        
-        # 50%のサイズで画像化（回転を考慮）
+        # PDFメタデータの回転情報を無視する（AIの回転検出結果のみを使用）
+        pdf_rotation = page.rotation
+        if pdf_rotation != 0:
+            logger.info(f"Ignoring PDF metadata rotation for thumbnail: {pdf_rotation} degrees")
+            page.set_rotation(0)
+
+        # 50%のサイズで画像化
         zoom = 0.5
-        # Matrixに回転を含める
-        # 回転が0度でない場合、画像を回転させる
-        if page_rotation != 0:
-            mat = fitz.Matrix(zoom, zoom).prerotate(page_rotation)
-        else:
-            mat = fitz.Matrix(zoom, zoom)
-        
+        mat = fitz.Matrix(zoom, zoom)
+
+        # pixmapを取得（PDFメタデータの回転は無視された状態）
         pix = page.get_pixmap(matrix=mat)
 
         # PIL Imageに変換
         img_bytes = pix.tobytes("png")
         img = Image.open(BytesIO(img_bytes))
+
+        # rotationパラメータに基づいて画像を回転
+        # このrotationはAI解析や他の処理から渡される補正角度
+        # PIL.Image.rotateは反時計回りが正なので、時計回りの回転には負の角度を指定
+        if rotation == 90:
+            img = img.rotate(-90, expand=True)
+        elif rotation == 180:
+            img = img.rotate(180, expand=True)
+        elif rotation == 270:
+            img = img.rotate(-270, expand=True)
 
         # サムネイルサイズに縮小
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
@@ -367,11 +546,11 @@ class FileManager:
         """
         # Windows/Linuxで使えない文字を置換
         invalid_chars = r'[<>:"/\\|?*\x00-\x1f]'
-        sanitized = re.sub(invalid_chars, '_', text)
+        sanitized = re.sub(invalid_chars, "_", text)
         # 連続するアンダースコアを1つに
-        sanitized = re.sub(r'_+', '_', sanitized)
+        sanitized = re.sub(r"_+", "_", sanitized)
         # 先頭・末尾のアンダースコアを削除
-        sanitized = sanitized.strip('_')
+        sanitized = sanitized.strip("_")
         # 空文字列の場合は"unknown"に
         if not sanitized:
             sanitized = "unknown"

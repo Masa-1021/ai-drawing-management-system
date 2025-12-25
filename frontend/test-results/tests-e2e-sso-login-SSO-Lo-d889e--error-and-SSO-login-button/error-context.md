@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - link "CAD Drawing Manager" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e9]:
+          - link "アップロード" [ref=e10] [cursor=pointer]:
+            - /url: /upload
+          - link "図面一覧" [ref=e11] [cursor=pointer]:
+            - /url: /list
+          - link "検索" [ref=e12] [cursor=pointer]:
+            - /url: /search
+          - link "設備一覧" [ref=e13] [cursor=pointer]:
+            - /url: /equipment
+          - link "摘要表" [ref=e14] [cursor=pointer]:
+            - /url: /spec-sheets
+          - link "摘番マスタ" [ref=e15] [cursor=pointer]:
+            - /url: /spec-numbers
+          - link "プロンプト設定" [ref=e16] [cursor=pointer]:
+            - /url: /prompts
+    - main [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - heading "図面アップロード" [level=1] [ref=e20]
+          - paragraph [ref=e21]: PDFファイルをドラッグ&ドロップ、またはクリックして選択してください
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - img [ref=e25]
+            - generic [ref=e27]: AI接続エラー（AWS認証切れ）
+          - generic [ref=e28]:
+            - button "認証開始中..." [disabled] [ref=e29]
+            - button "再確認" [ref=e30] [cursor=pointer]
+        - generic [ref=e31]:
+          - button "Choose File" [ref=e32] [cursor=pointer]
+          - generic [ref=e33]:
+            - img [ref=e34]
+            - generic [ref=e36]: ファイルを選択またはドラッグ&ドロップ
+            - paragraph [ref=e37]: PDF / TIF (複数選択可、各ファイル最大50MB)
+    - contentinfo [ref=e38]:
+      - paragraph [ref=e40]: © 2024 CAD Drawing Manager. Powered by Claude AI.
+  - status [ref=e46]: 認証ページを開きました。認証後、自動的にトークンを取得します。
+```

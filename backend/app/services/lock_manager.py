@@ -63,9 +63,7 @@ class LockManager:
                 logger.info(f"Lock renewed: drawing={drawing_id}, user={user_id}")
                 return existing_lock
             else:
-                raise LockException(
-                    f"図面はすでに {existing_lock.user_id} によってロックされています"
-                )
+                raise LockException(f"図面はすでに {existing_lock.user_id} によってロックされています")
 
         # 新規ロック作成
         expires_at = datetime.utcnow() + timedelta(seconds=self.lock_timeout)
@@ -101,9 +99,7 @@ class LockManager:
             return True
 
         if lock.user_id != user_id:
-            raise LockException(
-                f"ロックを解放できません。別のユーザー ({lock.user_id}) がロックしています"
-            )
+            raise LockException(f"ロックを解放できません。別のユーザー ({lock.user_id}) がロックしています")
 
         self.db.delete(lock)
         self.db.commit()
@@ -129,11 +125,7 @@ class LockManager:
         # 期限切れロックを削除
         self.cleanup_expired_locks()
 
-        lock = (
-            self.db.query(Lock)
-            .filter(Lock.drawing_id == drawing_id)
-            .first()
-        )
+        lock = self.db.query(Lock).filter(Lock.drawing_id == drawing_id).first()
 
         return lock
 
@@ -146,11 +138,7 @@ class LockManager:
         """
         now = datetime.utcnow()
 
-        deleted_count = (
-            self.db.query(Lock)
-            .filter(Lock.expires_at < now)
-            .delete()
-        )
+        deleted_count = self.db.query(Lock).filter(Lock.expires_at < now).delete()
 
         if deleted_count > 0:
             self.db.commit()

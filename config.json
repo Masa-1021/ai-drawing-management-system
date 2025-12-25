@@ -1,16 +1,75 @@
 {
   "extractionFields": [
-    {"name": "図番", "required": true},
-    {"name": "図面タイトル", "required": true},
-    {"name": "作成日", "required": true},
-    {"name": "承認者", "required": true},
-    {"name": "会社名", "required": false},
-    {"name": "尺度", "required": false},
-    {"name": "材料", "required": false},
-    {"name": "材質", "required": false}
+    {"name": "図番", "required": true, "location": "右下テーブル"},
+    {"name": "設備名", "required": false, "location": "右下テーブル（図番の上）"},
+    {"name": "作成者", "required": false, "location": "右下テーブル"},
+    {"name": "作成日", "required": true, "location": "右下テーブル（YYYY-MM-DD形式）"},
+    {"name": "照査者", "required": false, "location": "右下テーブル"},
+    {"name": "設計者", "required": false, "location": "右下テーブル"},
+    {"name": "検認者", "required": false, "location": "右下テーブル"},
+    {"name": "会社名", "required": false, "location": "右下テーブル"},
+    {"name": "図法", "required": false, "location": "右下テーブル"},
+    {"name": "尺度", "required": false, "location": "右下テーブル"},
+    {"name": "使用機種", "required": false, "location": "左下テーブル（複数可）"},
+    {"name": "仕上げ精度", "required": false, "location": "上テーブル"},
+    {"name": "面取り方法", "required": false, "location": "上テーブル"},
+    {"name": "品名", "required": false, "location": "上テーブル"},
+    {"name": "材料", "required": false, "location": "上テーブル"},
+    {"name": "備考", "required": false, "location": "上テーブル（複数可）"}
   ],
   "storagePath": "./storage/drawings/",
   "lockTimeout": 300,
   "retryAttempts": 3,
-  "confidenceThreshold": 70
+  "confidenceThreshold": 70,
+  "specSheetParsing": {
+    "coverSheetName": "表紙",
+    "itemsSheetName": "摘要表",
+    "headerMapping": {
+      "equipment_name": {"row": 2, "col": 3},
+      "line_name": {"row": 3, "col": 3},
+      "model_name": {"row": 5, "col": 3},
+      "spec_number": {"row": 4, "col": 11},
+      "order_number": {"row": 4, "col": 12},
+      "created_by": {"row": 4, "col": 6},
+      "checked_by": {"row": 4, "col": 7},
+      "designed_by": {"row": 4, "col": 8},
+      "approved_by": {"row": 4, "col": 9}
+    },
+    "itemsStartRow": 7,
+    "columnMapping": {
+      "revision": 5,
+      "row_number": 6,
+      "part_name": 7,
+      "drawing_number": 8,
+      "sub_number": 9,
+      "item_number": 10,
+      "material": 11,
+      "heat_treatment": 12,
+      "surface_treatment": 13,
+      "quantity_per_set": 14,
+      "required_quantity": 15,
+      "parent_name": 27
+    },
+    "partTypeKeywords": {
+      "assembly": ["ASSY", "組立", "総組", "ASSEMBLY"],
+      "unit": ["UNIT", "ユニット", "UNIT_"]
+    }
+  },
+  "specNumberParsing": {
+    "sheetName": "検索用",
+    "dataStartRow": 4,
+    "columnMapping": {
+      "spec_number": 2,
+      "title": 3,
+      "model_name": 4,
+      "material_code": 5,
+      "usage_location": 6,
+      "line_name": 7,
+      "equipment_name": 8,
+      "design_date": 9,
+      "designer": 10,
+      "reference_drawing": 11,
+      "remarks": 12
+    }
+  }
 }

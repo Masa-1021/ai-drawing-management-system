@@ -5,7 +5,6 @@ config.jsonと.envファイルから設定を読み込み、アプリケーシ�
 """
 
 import json
-import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from pydantic_settings import BaseSettings
@@ -16,14 +15,12 @@ class Settings(BaseSettings):
     """環境変数の設定"""
 
     aws_region: str = Field(default="us-west-2", alias="AWS_REGION")
+    aws_profile: str = Field(default="", alias="AWS_PROFILE")
     aws_access_key_id: str = Field(default="", alias="AWS_ACCESS_KEY_ID")
     aws_secret_access_key: str = Field(default="", alias="AWS_SECRET_ACCESS_KEY")
-    model_id: str = Field(
-        default="anthropic.claude-3-5-sonnet-20241022-v2:0", alias="MODEL_ID"
-    )
-    database_url: str = Field(
-        default="sqlite:///./storage/database.db", alias="DATABASE_URL"
-    )
+    aws_session_token: str = Field(default="", alias="AWS_SESSION_TOKEN")
+    model_id: str = Field(default="anthropic.claude-3-5-sonnet-20241022-v2:0", alias="MODEL_ID")
+    database_url: str = Field(default="sqlite:///./storage/database.db", alias="DATABASE_URL")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     class Config:
@@ -53,7 +50,20 @@ class ConfigManager:
 
         # 設定を読み込み
         self.config_data: Dict[str, Any] = self._load_config()
-        self.settings = Settings()
+
+        # .envファイルのパスを設定（プロジェクトルートから探す）
+        env_file_path = self.project_root / ".env"
+        # 作業ディレクトリを一時的に変更して.envファイルを読み込む
+        import os
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(self.project_root)
+            self.settings = Settings(
+                _env_file=str(env_file_path) if env_file_path.exists() else None
+            )
+        finally:
+            os.chdir(original_cwd)
 
     def _load_config(self) -> Dict[str, Any]:
         """
@@ -67,9 +77,7 @@ class ConfigManager:
             json.JSONDecodeError: JSONのパースに失敗した場合
         """
         if not self.config_path.exists():
-            raise FileNotFoundError(
-                f"設定ファイルが見つかりません: {self.config_path}"
-            )
+            raise FileNotFoundError(f"設定ファイルが見つかりません: {self.config_path}")
 
         with open(self.config_path, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -144,6 +152,11 @@ class ConfigManager:
         return self.settings.aws_region
 
     @property
+    def aws_profile(self) -> str:
+        """AWS プロファイル名（SSO用）"""
+        return self.settings.aws_profile
+
+    @property
     def aws_access_key_id(self) -> str:
         """AWS アクセスキーID"""
         return self.settings.aws_access_key_id
@@ -152,6 +165,11 @@ class ConfigManager:
     def aws_secret_access_key(self) -> str:
         """AWS シークレットアクセスキー"""
         return self.settings.aws_secret_access_key
+
+    @property
+    def aws_session_token(self) -> str:
+        """AWS セッショントークン（一時認証情報用）"""
+        return self.settings.aws_session_token
 
     @property
     def model_id(self) -> str:

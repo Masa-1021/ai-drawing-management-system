@@ -18,7 +18,7 @@ export const searchApi = {
    * 自然言語検索
    */
   naturalLanguageSearch: async (query: string): Promise<Drawing[]> => {
-    const response = await apiClient.post<Drawing[]>('/api/v1/search/natural', {
+    const response = await apiClient.post<Drawing[]>('/v1/search/natural', {
       query,
     });
     return response.data;
@@ -32,7 +32,7 @@ export const searchApi = {
     limit = 10
   ): Promise<SimilaritySearchResult[]> => {
     const response = await apiClient.post<SimilaritySearchResult[]>(
-      '/api/v1/search/similar',
+      '/v1/search/similar',
       null,
       {
         params: { drawing_id: drawingId, limit },

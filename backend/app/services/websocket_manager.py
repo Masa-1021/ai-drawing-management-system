@@ -19,9 +19,11 @@ class WebSocketManager:
         # Socket.IOサーバー（ASGIモード）
         self.sio = socketio.AsyncServer(
             async_mode="asgi",
-            cors_allowed_origins=["http://localhost:5173", "http://localhost:3000"],
-            logger=False,
-            engineio_logger=False,
+            cors_allowed_origins="*",  # 開発環境用: すべてのOriginを許可
+            logger=True,
+            engineio_logger=True,
+            ping_timeout=120,  # pingタイムアウトを120秒に延長（AI解析に時間がかかるため）
+            ping_interval=30,  # ping間隔を30秒に設定
         )
 
         # 図面IDごとの購読ユーザーを管理
@@ -118,6 +120,17 @@ class WebSocketManager:
                     {"drawing_id": drawing_id},
                     room=sid,
                 )
+
+    async def notify_upload_progress(self, message: str, level: str = "info"):
+        """アップロード進捗を全クライアントに通知"""
+        logger.info(f"Upload progress: {message}")
+        await self.sio.emit(
+            "upload_progress",
+            {
+                "message": message,
+                "level": level,
+            },
+        )
 
     def get_asgi_app(self):
         """ASGIアプリケーションを取得"""

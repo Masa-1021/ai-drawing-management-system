@@ -15,8 +15,8 @@ interface DrawingState {
   setDrawings: (drawings: Drawing[]) => void;
   setSelectedDrawing: (drawing: Drawing | null) => void;
   addDrawing: (drawing: Drawing) => void;
-  updateDrawing: (id: number, updates: Partial<Drawing>) => void;
-  removeDrawing: (id: number) => void;
+  updateDrawing: (id: string, updates: Partial<Drawing>) => void;
+  removeDrawing: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 }

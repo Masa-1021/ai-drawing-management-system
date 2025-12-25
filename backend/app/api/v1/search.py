@@ -34,9 +34,7 @@ class SimilaritySearchResponse(BaseModel):
 
 
 @router.post("/natural", response_model=List[DrawingResponse])
-def natural_language_search(
-    request: NaturalSearchRequest, db: Session = Depends(get_db)
-):
+def natural_language_search(request: NaturalSearchRequest, db: Session = Depends(get_db)):
     """
     自然言語検索
 
@@ -49,9 +47,7 @@ def natural_language_search(
         return drawings
 
     except SearchServiceException as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post("/similar", response_model=List[SimilaritySearchResponse])
@@ -73,6 +69,4 @@ def similarity_search(
         return results
 
     except SearchServiceException as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -49,9 +49,7 @@ def setup_logging(log_dir: str = None, log_level: str = "INFO"):
         backupCount=5,
         encoding="utf-8",
     )
-    operation_handler.setFormatter(
-        logging.Formatter(log_format, datefmt=date_format)
-    )
+    operation_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
     operation_logger.addHandler(operation_handler)
 
     # コンソールにも出力

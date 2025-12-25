@@ -14,6 +14,7 @@ from app.models.drawing import Drawing
 from app.services.claude_client import ClaudeClient
 from app.services.pdf_converter import PDFConverter
 from app.utils.prompt_manager import PromptManager
+from app.utils.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class SearchService:
         claude_client: Optional[ClaudeClient] = None,
         pdf_converter: Optional[PDFConverter] = None,
         prompt_manager: Optional[PromptManager] = None,
+        config_manager: Optional[ConfigManager] = None,
     ):
         """
         初期化
@@ -42,9 +44,18 @@ class SearchService:
             claude_client: Claude APIクライアント
             pdf_converter: PDF変換サービス
             prompt_manager: プロンプトマネージャー
+            config_manager: 設定マネージャー
         """
         self.db = db
-        self.claude = claude_client or ClaudeClient()
+        self.config = config_manager or ConfigManager()
+
+        # ClaudeClientの初期化（ConfigManagerから認証情報を取得）
+        self.claude = claude_client or ClaudeClient(
+            region=self.config.aws_region,
+            model_id=self.config.model_id,
+            aws_access_key_id=self.config.aws_access_key_id,
+            aws_secret_access_key=self.config.aws_secret_access_key,
+        )
         self.pdf_converter = pdf_converter or PDFConverter()
         self.prompt_manager = prompt_manager or PromptManager()
 
@@ -65,9 +76,10 @@ class SearchService:
             logger.info(f"Natural language search: {query}")
 
             # プロンプト取得
-            prompt = self.prompt_manager.format_prompt(
-                "natural_language_query"
-            ) + f"\n\n入力: {query}\n出力:"
+            prompt = (
+                self.prompt_manager.format_prompt("natural_language_query")
+                + f"\n\n入力: {query}\n出力:"
+            )
 
             # Claude APIで構造化クエリに変換
             response = self.claude.invoke_with_text(prompt)
@@ -89,9 +101,7 @@ class SearchService:
             logger.error(f"Natural language search error: {e}")
             raise SearchServiceException(f"検索エラー: {str(e)}") from e
 
-    def _execute_structured_query(
-        self, structured_query: Dict[str, Any]
-    ) -> List[Drawing]:
+    def _execute_structured_query(self, structured_query: Dict[str, Any]) -> List[Drawing]:
         """
         構造化クエリを実行
 
@@ -143,9 +153,7 @@ class SearchService:
 
         return query.all()
 
-    def similarity_search(
-        self, query_drawing_id: int, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    def similarity_search(self, query_drawing_id: int, limit: int = 10) -> List[Dict[str, Any]]:
         """
         類似図面を検索
 
@@ -163,24 +171,16 @@ class SearchService:
             logger.info(f"Similarity search for drawing {query_drawing_id}")
 
             # 検索元図面を取得
-            query_drawing = (
-                self.db.query(Drawing)
-                .filter(Drawing.id == query_drawing_id)
-                .first()
-            )
+            query_drawing = self.db.query(Drawing).filter(Drawing.id == query_drawing_id).first()
 
             if not query_drawing:
-                raise SearchServiceException(
-                    f"図面が見つかりません: {query_drawing_id}"
-                )
+                raise SearchServiceException(f"図面が見つかりません: {query_drawing_id}")
 
             # 検索元画像を取得
             from app.utils.file_manager import FileManager
 
             file_manager = FileManager()
-            query_pdf_path = file_manager.get_pdf_path(
-                query_drawing.pdf_filename
-            )
+            query_pdf_path = file_manager.get_pdf_path(query_drawing.pdf_filename)
             query_image = self.pdf_converter.pdf_page_to_image(
                 query_pdf_path, query_drawing.page_number
             )
@@ -195,49 +195,35 @@ class SearchService:
                     continue
 
                 # 対象画像を取得
-                target_pdf_path = file_manager.get_pdf_path(
-                    target_drawing.pdf_filename
-                )
+                target_pdf_path = file_manager.get_pdf_path(target_drawing.pdf_filename)
                 target_image = self.pdf_converter.pdf_page_to_image(
                     target_pdf_path, target_drawing.page_number
                 )
 
                 # 類似度を計算
-                similarity_result = self._calculate_similarity(
-                    query_image, target_image
-                )
+                similarity_result = self._calculate_similarity(query_image, target_image)
 
                 results.append(
                     {
                         "drawing": target_drawing,
-                        "similarity_score": similarity_result.get(
-                            "similarity_score", 0
-                        ),
+                        "similarity_score": similarity_result.get("similarity_score", 0),
                         "reason": similarity_result.get("reason", ""),
-                        "common_features": similarity_result.get(
-                            "common_features", []
-                        ),
+                        "common_features": similarity_result.get("common_features", []),
                         "differences": similarity_result.get("differences", []),
                     }
                 )
 
             # 類似度順にソート
-            results.sort(
-                key=lambda x: x["similarity_score"], reverse=True
-            )
+            results.sort(key=lambda x: x["similarity_score"], reverse=True)
 
             # 上位limit件を返す
             return results[:limit]
 
         except Exception as e:
             logger.error(f"Similarity search error: {e}")
-            raise SearchServiceException(
-                f"類似検索エラー: {str(e)}"
-            ) from e
+            raise SearchServiceException(f"類似検索エラー: {str(e)}") from e
 
-    def _calculate_similarity(
-        self, query_image: bytes, target_image: bytes
-    ) -> Dict[str, Any]:
+    def _calculate_similarity(self, query_image: bytes, target_image: bytes) -> Dict[str, Any]:
         """
         2つの画像の類似度を計算
 

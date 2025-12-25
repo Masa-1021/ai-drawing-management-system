@@ -6,15 +6,21 @@ import { Link, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
   children: React.ReactNode;
+  fullWidth?: boolean;
 }
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, fullWidth = false }: LayoutProps) {
   const location = useLocation();
 
   const navItems = [
+    { path: '/', label: 'ホーム' },
     { path: '/upload', label: 'アップロード' },
     { path: '/list', label: '図面一覧' },
     { path: '/search', label: '検索' },
+    { path: '/equipment', label: '設備一覧' },
+    { path: '/spec-sheets', label: '摘要表' },
+    { path: '/spec-numbers', label: '摘番マスタ' },
+    { path: '/prompts', label: 'プロンプト設定' },
   ];
 
   return (
@@ -26,7 +32,7 @@ export default function Layout({ children }: LayoutProps) {
             {/* ロゴ */}
             <div className="flex items-center">
               <Link to="/" className="text-xl font-bold text-me-red">
-                CAD Drawing Manager
+                図面管理システム
               </Link>
             </div>
 
@@ -51,13 +57,15 @@ export default function Layout({ children }: LayoutProps) {
       </header>
 
       {/* メインコンテンツ */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+      <main className={fullWidth ? "w-full h-[calc(100vh-64px-57px)]" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
+        {children}
+      </main>
 
       {/* フッター */}
       <footer className="bg-white border-t border-me-grey-medium mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <p className="text-center text-sm text-me-grey-dark">
-            © 2024 CAD Drawing Manager. Powered by Claude AI.
+            © 2024 図面管理システム. Powered by Claude AI.
           </p>
         </div>
       </footer>

@@ -11,6 +11,13 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.5",
+    "@mui/material": "^7.3.5",
+    "@mui/x-data-grid": "^8.19.0",
+    "@mui/x-tree-view": "^8.19.0",
+    "@tanstack/react-query": "^5.90.11",
     "axios": "^1.6.0",
     "pdfjs-dist": "^3.11.0",
     "react": "^18.2.0",
@@ -36,8 +43,9 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "postcss": "^8.4.0",
+    "puppeteer": "^24.32.1",
     "tailwindcss": "^3.3.0",
-    "typescript": "^5.0.0",
+    "typescript": "^5.9.3",
     "vite": "^5.0.0",
     "vitest": "^1.0.0"
   }

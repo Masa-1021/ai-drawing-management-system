@@ -19,4 +19,6 @@ class Lock(Base):
     drawing = relationship("Drawing", back_populates="lock")
 
     def __repr__(self):
-        return f"<Lock(drawing_id={self.drawing_id}, user={self.user_id}, expires={self.expires_at})>"
+        return (
+            f"<Lock(drawing_id={self.drawing_id}, user={self.user_id}, expires={self.expires_at})>"
+        )

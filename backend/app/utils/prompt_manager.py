@@ -45,8 +45,7 @@ class PromptManager:
 
         if not prompt_path.exists():
             raise FileNotFoundError(
-                f"プロンプトファイルが見つかりません: {prompt_path}\n"
-                f"backend/prompts/{prompt_name}.txt を作成してください"
+                f"プロンプトファイルが見つかりません: {prompt_path}\n" f"backend/prompts/{prompt_name}.txt を作成してください"
             )
 
         with open(prompt_path, "r", encoding="utf-8") as f:

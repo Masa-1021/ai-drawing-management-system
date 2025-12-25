@@ -5,14 +5,20 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    host: '0.0.0.0', // すべてのネットワークインターフェースで接続を受け付ける
+    port: 5175,
+    allowedHosts: ['localhost', 'cad-frontend-dev'], // テスト用にDockerホスト名を許可
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:8000',
+        changeOrigin: true
+      },
+      '/storage': {
+        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true
       },
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: process.env.VITE_WS_PROXY_TARGET || 'ws://localhost:8000',
         ws: true
       }
     }

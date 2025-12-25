@@ -1,0 +1,72 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Temporary files
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+nul
+
+# Environment
+.env
+.env.local
+
+# Storage (ボリュームマウントで管理)
+storage/
+
+# Build artifacts
+frontend/dist/
+frontend/node_modules/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+
+# Tests and reports
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/
+backend/tests/
+backend/.coverage
+
+# PowerShell scripts
+*.ps1
+
+# Screenshots
+*.png
+*.jpg
+*.jpeg
+frontend/screenshots/
+
+# PDFs (テスト用)
+pdf/
+*.pdf
+*.tif
+
+# Logs
+*.log
+logs/
+
+# Migrations
+backend/migrations/
+
+# Scripts
+backend/scripts/
+*.bat
+*.sh
